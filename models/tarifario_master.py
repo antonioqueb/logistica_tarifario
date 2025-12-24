@@ -1,9 +1,8 @@
-from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo import models, fields, api
 
 class FreightTariff(models.Model):
     _name = 'freight.tariff'
-    _description = 'Tarifario Global de Fletes'
+    _description = 'Tarifario de Fletes'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc'
 
@@ -11,41 +10,37 @@ class FreightTariff(models.Model):
     active = fields.Boolean(default=True)
     
     # Relaciones
-    forwarder_id = fields.Many2one('res.partner', string='Forwarder', required=True, domain=[('is_company', '=', True)])
-    naviera_id = fields.Many2one('res.partner', string='Naviera', domain=[('is_company', '=', True)])
+    forwarder_id = fields.Many2one('res.partner', string='Forwarder', required=True)
+    naviera_id = fields.Many2one('res.partner', string='Naviera')
     
-    # Ubicaciones (Cambiado a Char por consistencia con tu vista, o usa Many2one si tienes puertos)
-    pol_id = fields.Char(string='POL (Puerto de Carga)', required=True)
-    pod_id = fields.Char(string='POD (Puerto de Destino)', required=True)
+    # Ubicaciones
+    pol_id = fields.Char(string='Puerto Carga (POL)', required=True)
+    pod_id = fields.Char(string='Puerto Destino (POD)', required=True)
     
     # Costos
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.ref('base.USD'))
-    ocean_freight = fields.Monetary(string='OF (Ocean Freight)')
+    ocean_freight = fields.Monetary(string='Ocean Freight')
     ams_imo = fields.Monetary(string='AMS + IMO')
-    lib_seguro = fields.Monetary(string='Lib. + Seguro')
-    all_in = fields.Monetary(string='ALL IN TOTAL', compute='_compute_all_in', store=True)
+    lib_seguro = fields.Monetary(string='Lib + Seguro')
+    all_in = fields.Monetary(string='Total ALL IN', compute='_compute_all_in', store=True)
     
     # Logística
     equipo = fields.Selection([
-        ('20', "20' Standard"),
-        ('40', "40' Standard"),
-        ('40hc', "40' High Cube"),
-        ('lcl', "LCL")
-    ], string='Tipo de Equipo', required=True, default='20')
+        ('20', "20' ST"), ('40', "40' ST"), ('40hc', "40' HC"), ('lcl', "LCL")
+    ], string='Equipo', required=True, default='20')
     
     vigencia_fin = fields.Date(string='Vigencia Hasta', required=True)
-    fecha_tarifa = fields.Date(string='Fecha Aplicación', default=fields.Date.context_today)
+    fecha_tarifa = fields.Date(string='Fecha Tarifa', default=fields.Date.context_today)
     
-    # Campos para búsqueda (Deben ser store=True para que el <search> los vea)
+    # Campos de Periodo (Importantes para la búsqueda)
     anio = fields.Char(string='Año', compute='_compute_periodo', store=True)
     mes = fields.Selection([
-        ('01', 'Enero'), ('02', 'Febrero'), ('03', 'Marzo'), ('04', 'Abril'),
-        ('05', 'Mayo'), ('06', 'Junio'), ('07', 'Julio'), ('08', 'Agosto'),
-        ('09', 'Septiembre'), ('10', 'Octubre'), ('11', 'Noviembre'), ('12', 'Diciembre')
+        ('01', 'Ene'), ('02', 'Feb'), ('03', 'Mar'), ('04', 'Abr'),
+        ('05', 'May'), ('06', 'Jun'), ('07', 'Jul'), ('08', 'Ago'),
+        ('09', 'Sep'), ('10', 'Oct'), ('11', 'Nov'), ('12', 'Dic')
     ], string='Mes', compute='_compute_periodo', store=True)
 
     state = fields.Selection([
-        ('draft', 'Borrador'),
         ('active', 'Vigente'),
         ('expired', 'Expirada')
     ], string='Estado', default='active', compute='_compute_state', store=True)
@@ -54,7 +49,7 @@ class FreightTariff(models.Model):
     def _compute_name(self):
         for rec in self:
             date_str = rec.fecha_tarifa.strftime('%Y-%m') if rec.fecha_tarifa else ''
-            rec.name = f"{rec.forwarder_id.name or 'N/A'} | {rec.pol_id}-{rec.pod_id} ({date_str})"
+            rec.name = f"{rec.forwarder_id.name or ''} | {rec.pol_id or ''}-{rec.pod_id or ''} ({date_str})"
 
     @api.depends('ocean_freight', 'ams_imo', 'lib_seguro')
     def _compute_all_in(self):

@@ -1,19 +1,24 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-const { Component, onWillStart } = owl;
+import { Component, onWillStart } from "@odoo/owl";
 
 export class TarifarioDashboard extends Component {
     setup() {
         this.orm = useService("orm");
-        this.stats = {};
+        this.stats = [];
         
         onWillStart(async () => {
-            this.stats = await this.orm.call("freight.tariff", "read_group", [
-                [], ["all_in:avg", "id:count"], ["state"]
-            ]);
+            // Carga de datos agrupados para el Dashboard
+            this.stats = await this.orm.readGroup(
+                "freight.tariff", 
+                [], 
+                ["all_in:avg", "id:count"], 
+                ["state"]
+            );
         });
     }
 }
+
 TarifarioDashboard.template = "logistica_tarifario.DashboardMain";
 registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);

@@ -1,6 +1,5 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
-from datetime import datetime
 
 class FreightTariff(models.Model):
     _name = 'freight.tariff'
@@ -11,19 +10,17 @@ class FreightTariff(models.Model):
     name = fields.Char(string='Referencia', compute='_compute_name', store=True)
     active = fields.Boolean(default=True)
     
-    # Relaciones Master Data
+    # Relaciones
     forwarder_id = fields.Many2one('res.partner', string='Forwarder', required=True, domain=[('is_company', '=', True)])
     naviera_id = fields.Many2one('res.partner', string='Naviera', domain=[('is_company', '=', True)])
     
-    # Ubicaciones
-    pais_origen = fields.Many2one('res.country', string='País Origen')
+    # Ubicaciones (Cambiado a Char por consistencia con tu vista, o usa Many2one si tienes puertos)
     pol_id = fields.Char(string='POL (Puerto de Carga)', required=True)
     pod_id = fields.Char(string='POD (Puerto de Destino)', required=True)
     
-    # Costos y Precios
+    # Costos
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.ref('base.USD'))
     ocean_freight = fields.Monetary(string='OF (Ocean Freight)')
-    costo_exw = fields.Monetary(string='Costo EXW')
     ams_imo = fields.Monetary(string='AMS + IMO')
     lib_seguro = fields.Monetary(string='Lib. + Seguro')
     all_in = fields.Monetary(string='ALL IN TOTAL', compute='_compute_all_in', store=True)
@@ -36,12 +33,10 @@ class FreightTariff(models.Model):
         ('lcl', "LCL")
     ], string='Tipo de Equipo', required=True, default='20')
     
-    tt = fields.Integer(string='TT (Transit Time Días)')
-    demoras = fields.Integer(string='Días de Demoras Libres')
     vigencia_fin = fields.Date(string='Vigencia Hasta', required=True)
-    
-    # Periodos para Reportería
     fecha_tarifa = fields.Date(string='Fecha Aplicación', default=fields.Date.context_today)
+    
+    # Campos para búsqueda (Deben ser store=True para que el <search> los vea)
     anio = fields.Char(string='Año', compute='_compute_periodo', store=True)
     mes = fields.Selection([
         ('01', 'Enero'), ('02', 'Febrero'), ('03', 'Marzo'), ('04', 'Abril'),
@@ -49,7 +44,6 @@ class FreightTariff(models.Model):
         ('09', 'Septiembre'), ('10', 'Octubre'), ('11', 'Noviembre'), ('12', 'Diciembre')
     ], string='Mes', compute='_compute_periodo', store=True)
 
-    nota = fields.Text(string='Observaciones Internas')
     state = fields.Selection([
         ('draft', 'Borrador'),
         ('active', 'Vigente'),
@@ -73,6 +67,9 @@ class FreightTariff(models.Model):
             if rec.fecha_tarifa:
                 rec.anio = str(rec.fecha_tarifa.year)
                 rec.mes = str(rec.fecha_tarifa.month).zfill(2)
+            else:
+                rec.anio = False
+                rec.mes = False
 
     @api.depends('vigencia_fin')
     def _compute_state(self):

@@ -11,12 +11,12 @@ from . import models
     'author': 'Expert Developer',
     'category': 'Operations/Logistics',
     'summary': 'Control histórico de tarifas, KPIs y catálogo de fletes marítimos',
-    'depends': ['base', 'web', 'board'],
+    'depends': ['base', 'web', 'board', 'mail'], # He añadido 'mail' porque usas _inherit mail.thread
     'data': [
         'security/ir.model.access.csv',
-        'views/tarifario_views.xml', # Mover arriba (aquí está la acción)
-        'views/tarifario_menus.xml', # Mover abajo (aquí se usa la acción)
-        'views/dashboard_kpi.xml',
+        'views/tarifario_views.xml',     # 1. CARGA PRIMERO (Define la acción)
+        'views/tarifario_menus.xml',     # 2. CARGA DESPUÉS (Usa la acción)
+        'views/dashboard_kpi.xml',       # 3. CARGA AL FINAL (Usa los menús raíz)
     ],
     'assets': {
         'web.assets_backend': [
@@ -28,8 +28,7 @@ from . import models
     'application': True,
     'installable': True,
     'license': 'LGPL-3',
-}
-```
+}```
 
 ## ./models/__init__.py
 ```py
@@ -205,16 +204,30 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
 ## ./views/tarifario_menus.xml
 ```xml
 <odoo>
-    <menuitem id="menu_tarifario_root" name="Logística: Tarifario" web_icon="logistica_tarifario,static/description/icon.png"/>
-    <menuitem id="menu_tarifario_operaciones" name="Operaciones" parent="menu_tarifario_root" sequence="10"/>
-    <menuitem id="menu_freight_tariff_main" name="Catálogo de Tarifas" parent="menu_tarifario_operaciones" action="action_freight_tariff"/>
-</odoo>
-```
+    <!-- Menú Principal -->
+    <menuitem id="menu_tarifario_root" 
+              name="Logística: Tarifario" 
+              web_icon="logistica_tarifario,static/description/icon.png"
+              sequence="1"/>
+
+    <!-- Contenedor Operaciones -->
+    <menuitem id="menu_tarifario_operaciones" 
+              name="Operaciones" 
+              parent="menu_tarifario_root" 
+              sequence="10"/>
+
+    <!-- Acción al Catálogo -->
+    <menuitem id="menu_freight_tariff_main" 
+              name="Catálogo de Tarifas" 
+              parent="menu_tarifario_operaciones" 
+              action="action_freight_tariff"
+              sequence="20"/>
+</odoo>```
 
 ## ./views/tarifario_views.xml
 ```xml
 <odoo>
-    <!-- Búsqueda Avanzada y Filtros -->
+    <!-- Búsqueda Avanzada -->
     <record id="view_freight_tariff_search" model="ir.ui.view">
         <field name="name">freight.tariff.search</field>
         <field name="model">freight.tariff</field>
@@ -223,41 +236,32 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
-                <field name="naviera_id"/>
                 <filter string="Vigentes" name="filter_active" domain="[('state', '=', 'active')]"/>
-                <filter string="Expiradas" name="filter_expired" domain="[('state', '=', 'expired')]"/>
-                <separator/>
                 <group expand="1" string="Agrupar Por">
                     <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/>
-                    <filter name="group_mes" string="Mes" context="{'group_by': 'mes'}"/>
-                    <filter name="group_fwd" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
-                    <filter name="group_pod" string="Puerto Destino" context="{'group_by': 'pod_id'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- Lista (Tree) con Colores -->
-    <record id="view_freight_tariff_tree" model="ir.ui.view">
-        <field name="name">freight.tariff.tree</field>
+    <!-- Lista (Tree) -> CAMBIADO A <list> PARA ODOO 19 -->
+    <record id="view_freight_tariff_list" model="ir.ui.view">
+        <field name="name">freight.tariff.list</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <tree decoration-danger="state == 'expired'" decoration-success="state == 'active'" sample="1">
+            <list decoration-danger="state == 'expired'" decoration-success="state == 'active'" sample="1">
                 <field name="anio"/>
                 <field name="mes"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
-                <field name="equipo"/>
-                <field name="all_in" sum="Costo Total" widget="monetary"/>
-                <field name="naviera_id"/>
-                <field name="vigencia_fin" widget="remaining_days"/>
-                <field name="state" widget="badge" decoration-info="state == 'active'"/>
-            </tree>
+                <field name="all_in" sum="Total" widget="monetary"/>
+                <field name="state" widget="badge"/>
+            </list>
         </field>
     </record>
 
-    <!-- Formulario Detallado -->
+    <!-- Formulario -->
     <record id="view_freight_tariff_form" model="ir.ui.view">
         <field name="name">freight.tariff.form</field>
         <field name="model">freight.tariff</field>
@@ -271,43 +275,18 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
                         <h1><field name="name"/></h1>
                     </div>
                     <group>
-                        <group string="Ubicación y Socios">
-                            <field name="forwarder_id" options="{'no_create': True}"/>
-                            <field name="naviera_id" options="{'no_create': True}"/>
-                            <field name="pais_origen"/>
-                            <field name="pol_id" placeholder="Ej: Vitoria"/>
-                            <field name="pod_id" placeholder="Ej: Altamira"/>
+                        <group>
+                            <field name="forwarder_id"/>
+                            <field name="pol_id"/>
+                            <field name="pod_id"/>
                         </group>
-                        <group string="Detalles de Tarifa">
+                        <group>
                             <field name="fecha_tarifa"/>
                             <field name="vigencia_fin"/>
                             <field name="equipo"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
-                    <notebook>
-                        <page string="Desglose Financiero" name="financials">
-                            <group>
-                                <group string="Costos Base">
-                                    <field name="ocean_freight" widget="monetary"/>
-                                    <field name="costo_exw" widget="monetary"/>
-                                </group>
-                                <group string="Cargos Adicionales">
-                                    <field name="ams_imo" widget="monetary"/>
-                                    <field name="lib_seguro" widget="monetary"/>
-                                    <field name="all_in" class="oe_subtotal_footer_separator" widget="monetary"/>
-                                </group>
-                            </group>
-                        </page>
-                        <page string="Logística Adicional" name="logistics">
-                            <group col="4">
-                                <field name="tt"/>
-                                <field name="demoras"/>
-                            </group>
-                            <separator string="Notas"/>
-                            <field name="nota" placeholder="Condiciones especiales..."/>
-                        </page>
-                    </notebook>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
@@ -318,29 +297,14 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
         </field>
     </record>
 
-    <!-- Vista Pivot (Análisis de Datos) -->
-    <record id="view_freight_tariff_pivot" model="ir.ui.view">
-        <field name="name">freight.tariff.pivot</field>
-        <field name="model">freight.tariff</field>
-        <field name="arch" type="xml">
-            <pivot string="Análisis de Tarifas Histórico">
-                <field name="anio" type="row"/>
-                <field name="mes" type="row"/>
-                <field name="forwarder_id" type="col"/>
-                <field name="all_in" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-
-    <!-- Acción -->
+    <!-- Acción: CAMBIADO tree por list -->
     <record id="action_freight_tariff" model="ir.actions.act_window">
         <field name="name">Catálogo de Tarifas</field>
         <field name="res_model">freight.tariff</field>
-        <field name="view_mode">tree,form,pivot,graph</field>
+        <field name="view_mode">list,form,pivot</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Crea tu primera tarifa</p>
         </field>
     </record>
-</odoo>
-```
+</odoo>```
 

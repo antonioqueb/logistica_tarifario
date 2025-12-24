@@ -4,31 +4,36 @@
         <field name="name">freight.tariff.search</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <search>
+            <search string="Búsqueda de Tarifas">
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
+                <field name="anio"/>
+                <separator/>
                 <filter string="Vigentes" name="filter_active" domain="[('state', '=', 'active')]"/>
+                <filter string="Expiradas" name="filter_expired" domain="[('state', '=', 'expired')]"/>
                 <group expand="1" string="Agrupar Por">
+                    <filter name="group_forwarder" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
                     <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/>
+                    <filter name="group_mes" string="Mes" context="{'group_by': 'mes'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- Lista (Tree) -> CAMBIADO A <list> PARA ODOO 19 -->
+    <!-- Lista -->
     <record id="view_freight_tariff_list" model="ir.ui.view">
         <field name="name">freight.tariff.list</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
             <list decoration-danger="state == 'expired'" decoration-success="state == 'active'" sample="1">
-                <field name="anio"/>
-                <field name="mes"/>
+                <field name="anio" optional="show"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
+                <field name="equipo"/>
                 <field name="all_in" sum="Total" widget="monetary"/>
-                <field name="state" widget="badge"/>
+                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-danger="state == 'expired'"/>
             </list>
         </field>
     </record>
@@ -40,23 +45,33 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <field name="state" widget="statusbar"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,expired"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
-                        <h1><field name="name"/></h1>
+                        <h1><field name="name" readonly="1"/></h1>
                     </div>
                     <group>
-                        <group>
-                            <field name="forwarder_id"/>
+                        <group string="Información General">
+                            <field name="forwarder_id" options="{'no_create': True}"/>
                             <field name="pol_id"/>
                             <field name="pod_id"/>
+                            <field name="equipo"/>
                         </group>
-                        <group>
+                        <group string="Fechas y Moneda">
                             <field name="fecha_tarifa"/>
                             <field name="vigencia_fin"/>
-                            <field name="equipo"/>
-                            <field name="currency_id" invisible="1"/>
+                            <field name="currency_id"/>
+                        </group>
+                    </group>
+                    <group string="Desglose de Costos">
+                        <group>
+                            <field name="ocean_freight"/>
+                            <field name="ams_imo"/>
+                            <field name="lib_seguro"/>
+                        </group>
+                        <group>
+                            <field name="all_in" class="oe_subtotal_footer_separator"/>
                         </group>
                     </group>
                 </sheet>
@@ -69,13 +84,14 @@
         </field>
     </record>
 
-    <!-- Acción: CAMBIADO tree por list -->
+    <!-- Acción -->
     <record id="action_freight_tariff" model="ir.actions.act_window">
         <field name="name">Catálogo de Tarifas</field>
         <field name="res_model">freight.tariff</field>
-        <field name="view_mode">list,form,pivot</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_freight_tariff_search"/>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Crea tu primera tarifa</p>
+            <p class="o_view_nocontent_smiling_face">Crea tu primera tarifa flete</p>
         </field>
     </record>
 </odoo>

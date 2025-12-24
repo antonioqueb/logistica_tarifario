@@ -1,14 +1,17 @@
 <odoo>
+    <!-- Menú Principal -->
     <menuitem id="menu_tarifario_root" 
               name="Logística: Tarifario" 
               web_icon="logistica_tarifario,static/description/icon.png"
-              sequence="1"/> <!-- Sequence bajo para asegurar creación -->
+              sequence="1"/>
 
+    <!-- Contenedor Operaciones -->
     <menuitem id="menu_tarifario_operaciones" 
               name="Operaciones" 
               parent="menu_tarifario_root" 
               sequence="10"/>
 
+    <!-- Acción al Catálogo -->
     <menuitem id="menu_freight_tariff_main" 
               name="Catálogo de Tarifas" 
               parent="menu_tarifario_operaciones" 

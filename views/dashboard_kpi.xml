@@ -1,0 +1,12 @@
+<odoo>
+    <record id="action_tarifario_dashboard" model="ir.actions.client">
+        <field name="name">Panel de Control KPIs</field>
+        <field name="tag">tarifario_dashboard_tag</field>
+    </record>
+
+    <menuitem id="menu_tarifario_kpi" 
+              name="Dashboard KPIs" 
+              parent="menu_tarifario_root" 
+              action="action_tarifario_dashboard" 
+              sequence="1"/>
+</odoo>

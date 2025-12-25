@@ -63,8 +63,46 @@ class FreightTariff(models.Model):
 
     # Equipo
     equipo = fields.Selection([
-        ('20', "20' ST"), ('40', "40' ST"), ('40hc', "40' HC"), ('lcl', "LCL")
-    ], string='Equipo', required=True, default='20')
+        # Dry / Standard (GP)
+        ('20st',  "20' ST (Dry/GP)"),
+        ('40st',  "40' ST (Dry/GP)"),
+        ('40hc',  "40' HC (High Cube Dry)"),
+        ('45hc',  "45' HC (High Cube Dry)"),
+        ('53st',  "53' ST (North America)"),
+        ('53hc',  "53' HC (North America)"),
+
+        # Reefer
+        ('20rf',  "20' RF (Reefer)"),
+        ('40rf',  "40' RF (Reefer)"),
+        ('40rh',  "40' RH / 40' HC RF (High Cube Reefer)"),
+        ('nor',   "NOR (Non-Operating Reefer)"),
+
+        # Open Top
+        ('20ot',  "20' OT (Open Top)"),
+        ('40ot',  "40' OT (Open Top)"),
+
+        # Flat Rack / Platform
+        ('20fr',  "20' FR (Flat Rack)"),
+        ('40fr',  "40' FR (Flat Rack)"),
+        ('20pl',  "20' PL (Platform)"),
+        ('40pl',  "40' PL (Platform)"),
+
+        # Tank
+        ('20tk',  "20' TK (Tank)"),
+
+        # Special
+        ('20ht',  "20' HT (Hard Top)"),
+        ('40ht',  "40' HT (Hard Top)"),
+        ('20vh',  "20' VH (Ventilated)"),
+        ('40pw',  "40' PW (Pallet Wide)"),
+        ('45pwhc',"45' PW HC (Pallet Wide High Cube)"),
+
+        # Services
+        ('lcl',   "LCL (Less than Container Load)"),
+        ('bbk',   "BBK (Breakbulk / Suelta)"),
+        ('roro',  "RoRo (Roll-on/Roll-off)"),
+    ], string='Equipo', required=True, default='20st')
+
 
     state = fields.Selection([
         ('active', 'Vigente'),

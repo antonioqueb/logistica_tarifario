@@ -13,12 +13,12 @@
                 <field name="pol_id"/>
                 <field name="pod_id"/> -->
                 
-                <separator/>
+                <!-- <separator/> -->
                 <!-- Filtros de Estado -->
                 <filter string="Vigentes" name="filter_active" domain="[('state', '=', 'active')]"/>
                 <filter string="Expiradas" name="filter_expired" domain="[('state', '=', 'expired')]"/>
                 
-                <separator/>
+                <!-- <separator/> -->
                 <!-- Agrupaciones (Estructura de Studio) -->
                 <!-- <group expand="0" string="Agrupar Por">
                     <!-- <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/> -->

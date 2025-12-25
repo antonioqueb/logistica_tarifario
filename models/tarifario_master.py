@@ -1,4 +1,6 @@
 from odoo import models, fields, api
+from datetime import date
+
 
 class FreightTariff(models.Model):
     _name = 'freight.tariff'
@@ -8,70 +10,119 @@ class FreightTariff(models.Model):
 
     name = fields.Char(string='Referencia', compute='_compute_name', store=True)
     active = fields.Boolean(default=True)
-    
-    # Relaciones
-    forwarder_id = fields.Many2one('res.partner', string='Forwarder', required=True)
+
+    # País
+    country_id = fields.Many2one('res.country', string='País', required=True)
+
+    # Forwarder (solo con etiqueta Forwarder)
+    forwarder_id = fields.Many2one(
+        'res.partner',
+        string='Forwarder',
+        required=True,
+        domain="[('category_id.name', '=', 'Forwarder')]"
+    )
+
+    # Naviera
     naviera_id = fields.Many2one('res.partner', string='Naviera')
-    
+
     # Ubicaciones
     pol_id = fields.Char(string='Puerto Carga (POL)', required=True)
     pod_id = fields.Char(string='Puerto Destino (POD)', required=True)
-    
+
+    # Periodo
+    anio = fields.Char(
+        string='Año',
+        required=True,
+        default=lambda self: str(date.today().year)
+    )
+    mes = fields.Selection([
+        ('01', 'Enero'), ('02', 'Febrero'), ('03', 'Marzo'), ('04', 'Abril'),
+        ('05', 'Mayo'), ('06', 'Junio'), ('07', 'Julio'), ('08', 'Agosto'),
+        ('09', 'Septiembre'), ('10', 'Octubre'), ('11', 'Noviembre'), ('12', 'Diciembre')
+    ], string='Mes', required=True, default=lambda self: str(date.today().month).zfill(2))
+
     # Costos
-    currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.ref('base.USD'))
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Moneda',
+        default=lambda self: self.env.ref('base.USD')
+    )
     ocean_freight = fields.Monetary(string='Ocean Freight')
     ams_imo = fields.Monetary(string='AMS + IMO')
     lib_seguro = fields.Monetary(string='Lib + Seguro')
     all_in = fields.Monetary(string='Total ALL IN', compute='_compute_all_in', store=True)
-    
-    # Logística
+
+    # Tiempos
+    transit_time = fields.Integer(string='Transit Time (días)', help='Tiempo estimado de tránsito en días')
+    demoras = fields.Integer(string='Demoras (días)', help='Free time / días libres de demurrage')
+
+    # Equipo
     equipo = fields.Selection([
         ('20', "20' ST"), ('40', "40' ST"), ('40hc', "40' HC"), ('lcl', "LCL")
     ], string='Equipo', required=True, default='20')
-    
-    vigencia_fin = fields.Date(string='Vigencia Hasta', required=True)
-    fecha_tarifa = fields.Date(string='Fecha Tarifa', default=fields.Date.context_today)
-    
-    # PERIODOS (Crucial: store=True para que funcione el Group By)
-    anio = fields.Char(string='Año', compute='_compute_periodo', store=True)
-    mes = fields.Selection([
-        ('01', 'Ene'), ('02', 'Feb'), ('03', 'Mar'), ('04', 'Abr'),
-        ('05', 'May'), ('06', 'Jun'), ('07', 'Jul'), ('08', 'Ago'),
-        ('09', 'Sep'), ('10', 'Oct'), ('11', 'Nov'), ('12', 'Dic')
-    ], string='Mes', compute='_compute_periodo', store=True)
 
     state = fields.Selection([
         ('active', 'Vigente'),
         ('expired', 'Expirada')
     ], string='Estado', default='active', compute='_compute_state', store=True)
 
-    @api.depends('forwarder_id', 'pol_id', 'pod_id', 'fecha_tarifa')
+    @api.depends('country_id', 'forwarder_id', 'pol_id', 'pod_id', 'anio')
     def _compute_name(self):
         for rec in self:
-            date_str = rec.fecha_tarifa.strftime('%Y-%m') if rec.fecha_tarifa else ''
-            name = f"{rec.forwarder_id.name or ''} | {rec.pol_id or ''}-{rec.pod_id or ''} ({date_str})"
-            rec.name = name
+            parts = [
+                rec.country_id.name or '',
+                rec.forwarder_id.name or '',
+                rec.pol_id or '',
+                rec.pod_id or '',
+                rec.anio or ''
+            ]
+            rec.name = ' | '.join(filter(None, parts))
 
-    @api.depends('ocean_freight', 'ams_imo', 'lib_seguro')
+    @api.depends('ocean_freight', 'ams_imo')
     def _compute_all_in(self):
         for rec in self:
-            rec.all_in = (rec.ocean_freight or 0.0) + (rec.ams_imo or 0.0) + (rec.lib_seguro or 0.0)
+            rec.all_in = (rec.ocean_freight or 0.0) + (rec.ams_imo or 0.0)
 
-    @api.depends('fecha_tarifa')
-    def _compute_periodo(self):
-        for rec in self:
-            if rec.fecha_tarifa:
-                rec.anio = str(rec.fecha_tarifa.year)
-                rec.mes = str(rec.fecha_tarifa.month).zfill(2)
-            else:
-                rec.anio = False
-                rec.mes = False
-
-    @api.depends('vigencia_fin')
+    @api.depends('anio', 'mes')
     def _compute_state(self):
-        today = fields.Date.today()
+        today = date.today()
+        current_year = today.year
+        current_month = today.month
         for rec in self:
-            if rec.vigencia_fin and rec.vigencia_fin < today:
-                rec.state = 'expired'
+            if rec.anio and rec.mes:
+                try:
+                    tariff_year = int(rec.anio)
+                    tariff_month = int(rec.mes)
+                    if tariff_year < current_year or (tariff_year == current_year and tariff_month < current_month):
+                        rec.state = 'expired'
+                    else:
+                        rec.state = 'active'
+                except ValueError:
+                    rec.state = 'active'
             else:
                 rec.state = 'active'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        tag = self.env['res.partner.category'].search([('name', '=', 'Forwarder')], limit=1)
+        if not tag:
+            tag = self.env['res.partner.category'].create({'name': 'Forwarder'})
+
+        for vals in vals_list:
+            if vals.get('forwarder_id'):
+                partner = self.env['res.partner'].browse(vals['forwarder_id'])
+                if tag.id not in partner.category_id.ids:
+                    partner.write({'category_id': [(4, tag.id)]})
+
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('forwarder_id'):
+            tag = self.env['res.partner.category'].search([('name', '=', 'Forwarder')], limit=1)
+            if not tag:
+                tag = self.env['res.partner.category'].create({'name': 'Forwarder'})
+            partner = self.env['res.partner'].browse(vals['forwarder_id'])
+            if tag.id not in partner.category_id.ids:
+                partner.write({'category_id': [(4, tag.id)]})
+
+        return super().write(vals)

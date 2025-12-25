@@ -1,12 +1,13 @@
 {
     'name': 'Gestión Profesional de Tarifas Logísticas',
-    'version': '1.0.1',
+    'version': '1.1.0',
     'author': 'Alphaqueb Consulting',
     'category': 'Operations/Logistics',
     'summary': 'Control histórico de tarifas, KPIs y catálogo de fletes marítimos',
-    'depends': ['base', 'web', 'mail'],
+    'depends': ['base', 'web', 'mail', 'contacts'],
     'data': [
         'security/ir.model.access.csv',
+        'data/partner_category_data.xml',
         'views/tarifario_views.xml',
         'views/tarifario_menus.xml',
         'views/dashboard_kpi.xml',

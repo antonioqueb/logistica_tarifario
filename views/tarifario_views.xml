@@ -8,7 +8,6 @@
             <search string="Búsqueda de Tarifas">
                 <!-- Campos de búsqueda manual -->
                 <field name="name"/>
-                <field name="anio"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>

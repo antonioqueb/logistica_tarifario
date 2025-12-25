@@ -8,19 +8,18 @@ from . import models
 {
     'name': 'Gestión Profesional de Tarifas Logísticas',
     'version': '1.0.1',
-    'author': 'Expert Developer',
+    'author': 'Alphaqueb Consulting',
     'category': 'Operations/Logistics',
     'summary': 'Control histórico de tarifas, KPIs y catálogo de fletes marítimos',
-    'depends': ['base', 'web', 'board', 'mail'], # He añadido 'mail' porque usas _inherit mail.thread
+    'depends': ['base', 'web', 'mail'],
     'data': [
         'security/ir.model.access.csv',
-        'views/tarifario_views.xml',     # 1. CARGA PRIMERO (Define la acción)
-        'views/tarifario_menus.xml',     # 2. CARGA DESPUÉS (Usa la acción)
-        'views/dashboard_kpi.xml',       # 3. CARGA AL FINAL (Usa los menús raíz)
+        'views/tarifario_views.xml',
+        'views/tarifario_menus.xml',
+        'views/dashboard_kpi.xml',
     ],
     'assets': {
         'web.assets_backend': [
-            'logistica_tarifario/static/src/css/tarifario_style.css',
             'logistica_tarifario/static/src/js/tarifario_dashboard.js',
             'logistica_tarifario/static/src/xml/tarifario_dashboard.xml',
         ],
@@ -37,60 +36,49 @@ from . import tarifario_master
 
 ## ./models/tarifario_master.py
 ```py
-from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
-from datetime import datetime
+from odoo import models, fields, api
 
 class FreightTariff(models.Model):
     _name = 'freight.tariff'
-    _description = 'Tarifario Global de Fletes'
+    _description = 'Tarifario de Fletes'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc'
 
     name = fields.Char(string='Referencia', compute='_compute_name', store=True)
     active = fields.Boolean(default=True)
     
-    # Relaciones Master Data
-    forwarder_id = fields.Many2one('res.partner', string='Forwarder', required=True, domain=[('is_company', '=', True)])
-    naviera_id = fields.Many2one('res.partner', string='Naviera', domain=[('is_company', '=', True)])
+    # Relaciones
+    forwarder_id = fields.Many2one('res.partner', string='Forwarder', required=True)
+    naviera_id = fields.Many2one('res.partner', string='Naviera')
     
     # Ubicaciones
-    pais_origen = fields.Many2one('res.country', string='País Origen')
-    pol_id = fields.Char(string='POL (Puerto de Carga)', required=True)
-    pod_id = fields.Char(string='POD (Puerto de Destino)', required=True)
+    pol_id = fields.Char(string='Puerto Carga (POL)', required=True)
+    pod_id = fields.Char(string='Puerto Destino (POD)', required=True)
     
-    # Costos y Precios
+    # Costos
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.ref('base.USD'))
-    ocean_freight = fields.Monetary(string='OF (Ocean Freight)')
-    costo_exw = fields.Monetary(string='Costo EXW')
+    ocean_freight = fields.Monetary(string='Ocean Freight')
     ams_imo = fields.Monetary(string='AMS + IMO')
-    lib_seguro = fields.Monetary(string='Lib. + Seguro')
-    all_in = fields.Monetary(string='ALL IN TOTAL', compute='_compute_all_in', store=True)
+    lib_seguro = fields.Monetary(string='Lib + Seguro')
+    all_in = fields.Monetary(string='Total ALL IN', compute='_compute_all_in', store=True)
     
     # Logística
     equipo = fields.Selection([
-        ('20', "20' Standard"),
-        ('40', "40' Standard"),
-        ('40hc', "40' High Cube"),
-        ('lcl', "LCL")
-    ], string='Tipo de Equipo', required=True, default='20')
+        ('20', "20' ST"), ('40', "40' ST"), ('40hc', "40' HC"), ('lcl', "LCL")
+    ], string='Equipo', required=True, default='20')
     
-    tt = fields.Integer(string='TT (Transit Time Días)')
-    demoras = fields.Integer(string='Días de Demoras Libres')
     vigencia_fin = fields.Date(string='Vigencia Hasta', required=True)
+    fecha_tarifa = fields.Date(string='Fecha Tarifa', default=fields.Date.context_today)
     
-    # Periodos para Reportería
-    fecha_tarifa = fields.Date(string='Fecha Aplicación', default=fields.Date.context_today)
+    # PERIODOS (Crucial: store=True para que funcione el Group By)
     anio = fields.Char(string='Año', compute='_compute_periodo', store=True)
     mes = fields.Selection([
-        ('01', 'Enero'), ('02', 'Febrero'), ('03', 'Marzo'), ('04', 'Abril'),
-        ('05', 'Mayo'), ('06', 'Junio'), ('07', 'Julio'), ('08', 'Agosto'),
-        ('09', 'Septiembre'), ('10', 'Octubre'), ('11', 'Noviembre'), ('12', 'Diciembre')
+        ('01', 'Ene'), ('02', 'Feb'), ('03', 'Mar'), ('04', 'Abr'),
+        ('05', 'May'), ('06', 'Jun'), ('07', 'Jul'), ('08', 'Ago'),
+        ('09', 'Sep'), ('10', 'Oct'), ('11', 'Nov'), ('12', 'Dic')
     ], string='Mes', compute='_compute_periodo', store=True)
 
-    nota = fields.Text(string='Observaciones Internas')
     state = fields.Selection([
-        ('draft', 'Borrador'),
         ('active', 'Vigente'),
         ('expired', 'Expirada')
     ], string='Estado', default='active', compute='_compute_state', store=True)
@@ -99,12 +87,13 @@ class FreightTariff(models.Model):
     def _compute_name(self):
         for rec in self:
             date_str = rec.fecha_tarifa.strftime('%Y-%m') if rec.fecha_tarifa else ''
-            rec.name = f"{rec.forwarder_id.name or 'N/A'} | {rec.pol_id}-{rec.pod_id} ({date_str})"
+            name = f"{rec.forwarder_id.name or ''} | {rec.pol_id or ''}-{rec.pod_id or ''} ({date_str})"
+            rec.name = name
 
     @api.depends('ocean_freight', 'ams_imo', 'lib_seguro')
     def _compute_all_in(self):
         for rec in self:
-            rec.all_in = rec.ocean_freight + rec.ams_imo + rec.lib_seguro
+            rec.all_in = (rec.ocean_freight or 0.0) + (rec.ams_imo or 0.0) + (rec.lib_seguro or 0.0)
 
     @api.depends('fecha_tarifa')
     def _compute_periodo(self):
@@ -112,6 +101,9 @@ class FreightTariff(models.Model):
             if rec.fecha_tarifa:
                 rec.anio = str(rec.fecha_tarifa.year)
                 rec.mes = str(rec.fecha_tarifa.month).zfill(2)
+            else:
+                rec.anio = False
+                rec.mes = False
 
     @api.depends('vigencia_fin')
     def _compute_state(self):
@@ -120,31 +112,36 @@ class FreightTariff(models.Model):
             if rec.vigencia_fin and rec.vigencia_fin < today:
                 rec.state = 'expired'
             else:
-                rec.state = 'active'
-```
+                rec.state = 'active'```
 
 ## ./static/src/js/tarifario_dashboard.js
 ```js
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-const { Component, onWillStart } = owl;
+import { Component, onWillStart } from "@odoo/owl";
 
 export class TarifarioDashboard extends Component {
     setup() {
         this.orm = useService("orm");
-        this.stats = {};
+        this.stats = [];
         
         onWillStart(async () => {
-            this.stats = await this.orm.call("freight.tariff", "read_group", [
-                [], ["all_in:avg", "id:count"], ["state"]
-            ]);
+            try {
+                this.stats = await this.orm.readGroup(
+                    "freight.tariff", 
+                    [], 
+                    ["all_in:avg", "id:count"], 
+                    ["state"]
+                );
+            } catch (e) {
+                console.log("Error cargando Dashboard stats:", e);
+            }
         });
     }
 }
 TarifarioDashboard.template = "logistica_tarifario.DashboardMain";
-registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
-```
+registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);```
 
 ## ./static/src/xml/tarifario_dashboard.xml
 ```xml
@@ -226,37 +223,51 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
 
 ## ./views/tarifario_views.xml
 ```xml
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Búsqueda Avanzada -->
+    <!-- Búsqueda Avanzada (Adaptada de tu ejemplo de Studio) -->
     <record id="view_freight_tariff_search" model="ir.ui.view">
         <field name="name">freight.tariff.search</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <search>
+            <search string="Búsqueda de Tarifas">
+                <!-- Campos de búsqueda manual -->
+                <field name="name"/>
+                <field name="anio"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
+                
+                <separator/>
+                <!-- Filtros de Estado -->
                 <filter string="Vigentes" name="filter_active" domain="[('state', '=', 'active')]"/>
-                <group expand="1" string="Agrupar Por">
+                <filter string="Expiradas" name="filter_expired" domain="[('state', '=', 'expired')]"/>
+                
+                <separator/>
+                <!-- Agrupaciones (Estructura de Studio) -->
+                <group expand="0" string="Agrupar Por">
                     <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/>
+                    <filter name="group_forwarder" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
+                    <filter name="group_pol" string="Puerto Carga (POL)" context="{'group_by': 'pol_id'}"/>
+                    <filter name="group_pod" string="Puerto Destino (POD)" context="{'group_by': 'pod_id'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- Lista (Tree) -> CAMBIADO A <list> PARA ODOO 19 -->
+    <!-- Lista -->
     <record id="view_freight_tariff_list" model="ir.ui.view">
         <field name="name">freight.tariff.list</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <list decoration-danger="state == 'expired'" decoration-success="state == 'active'" sample="1">
+            <list decoration-success="state == 'active'" decoration-danger="state == 'expired'">
                 <field name="anio"/>
-                <field name="mes"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
-                <field name="all_in" sum="Total" widget="monetary"/>
-                <field name="state" widget="badge"/>
+                <field name="all_in" sum="Total"/>
+                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-danger="state == 'expired'"/>
             </list>
         </field>
     </record>
@@ -268,11 +279,11 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <field name="state" widget="statusbar"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,expired"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
-                        <h1><field name="name"/></h1>
+                        <h1><field name="name" readonly="1"/></h1>
                     </div>
                     <group>
                         <group>
@@ -287,6 +298,12 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
+                    <group string="Costos">
+                        <field name="ocean_freight"/>
+                        <field name="ams_imo"/>
+                        <field name="lib_seguro"/>
+                        <field name="all_in" class="oe_subtotal_footer_separator"/>
+                    </group>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
@@ -297,11 +314,12 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
         </field>
     </record>
 
-    <!-- Acción: CAMBIADO tree por list -->
+    <!-- Acción -->
     <record id="action_freight_tariff" model="ir.actions.act_window">
         <field name="name">Catálogo de Tarifas</field>
         <field name="res_model">freight.tariff</field>
-        <field name="view_mode">list,form,pivot</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_freight_tariff_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Crea tu primera tarifa</p>
         </field>

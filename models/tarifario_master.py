@@ -32,7 +32,7 @@ class FreightTariff(models.Model):
     vigencia_fin = fields.Date(string='Vigencia Hasta', required=True)
     fecha_tarifa = fields.Date(string='Fecha Tarifa', default=fields.Date.context_today)
     
-    # Campos de Periodo (Importantes para la búsqueda)
+    # PERIODOS (Crucial: store=True para que funcione el Group By)
     anio = fields.Char(string='Año', compute='_compute_periodo', store=True)
     mes = fields.Selection([
         ('01', 'Ene'), ('02', 'Feb'), ('03', 'Mar'), ('04', 'Abr'),
@@ -49,12 +49,13 @@ class FreightTariff(models.Model):
     def _compute_name(self):
         for rec in self:
             date_str = rec.fecha_tarifa.strftime('%Y-%m') if rec.fecha_tarifa else ''
-            rec.name = f"{rec.forwarder_id.name or ''} | {rec.pol_id or ''}-{rec.pod_id or ''} ({date_str})"
+            name = f"{rec.forwarder_id.name or ''} | {rec.pol_id or ''}-{rec.pod_id or ''} ({date_str})"
+            rec.name = name
 
     @api.depends('ocean_freight', 'ams_imo', 'lib_seguro')
     def _compute_all_in(self):
         for rec in self:
-            rec.all_in = rec.ocean_freight + rec.ams_imo + rec.lib_seguro
+            rec.all_in = (rec.ocean_freight or 0.0) + (rec.ams_imo or 0.0) + (rec.lib_seguro or 0.0)
 
     @api.depends('fecha_tarifa')
     def _compute_periodo(self):

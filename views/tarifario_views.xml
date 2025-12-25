@@ -1,53 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- 1. VISTA DE BÚSQUEDA (SEARCH VIEW) -->
-    <!-- Aquí integramos la estructura que te funcionó en Studio -->
+    <!-- Búsqueda Avanzada (Adaptada de tu ejemplo de Studio) -->
     <record id="view_freight_tariff_search" model="ir.ui.view">
         <field name="name">freight.tariff.search</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
             <search string="Búsqueda de Tarifas">
-                <!-- Campos para escribir en la barra de búsqueda -->
+                <!-- Campos de búsqueda manual -->
                 <field name="name"/>
                 <field name="anio"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
-
-                <!-- Filtros Rápidos (Botones) -->
+                
                 <separator/>
+                <!-- Filtros de Estado -->
                 <filter string="Vigentes" name="filter_active" domain="[('state', '=', 'active')]"/>
                 <filter string="Expiradas" name="filter_expired" domain="[('state', '=', 'expired')]"/>
-
-                <!-- Agrupaciones (Menú "Agrupar por") -->
+                
+                <separator/>
+                <!-- Agrupaciones (Estructura de Studio) -->
                 <group expand="0" string="Agrupar Por">
-                    <filter name="studio_group_by_1sg_1jd98oios" string="Año" context="{'group_by': 'anio'}"/>
-                    <filter name="studio_group_by_n1_1jd98ps7u" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
-                    <filter name="studio_group_by_6ro_1jd98q9se" string="Puerto Carga (POL)" context="{'group_by': 'pol_id'}"/>
-                    <filter name="studio_group_by_779_1jd98qknq" string="Puerto Destino (POD)" context="{'group_by': 'pod_id'}"/>
-                    <filter name="studio_group_by_9jd_1jd98r6cb" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/>
+                    <filter name="group_forwarder" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
+                    <filter name="group_pol" string="Puerto Carga (POL)" context="{'group_by': 'pol_id'}"/>
+                    <filter name="group_pod" string="Puerto Destino (POD)" context="{'group_by': 'pod_id'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- 2. VISTA DE LISTA (TREE/LIST VIEW) -->
+    <!-- Lista -->
     <record id="view_freight_tariff_list" model="ir.ui.view">
         <field name="name">freight.tariff.list</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <list decoration-success="state == 'active'" decoration-danger="state == 'expired'" sample="1">
-                <field name="anio" optional="show"/>
+            <list decoration-success="state == 'active'" decoration-danger="state == 'expired'">
+                <field name="anio"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
-                <field name="all_in" sum="Total" widget="monetary"/>
+                <field name="all_in" sum="Total"/>
                 <field name="state" widget="badge" decoration-success="state == 'active'" decoration-danger="state == 'expired'"/>
             </list>
         </field>
     </record>
 
-    <!-- 3. VISTA DE FORMULARIO (FORM VIEW) -->
+    <!-- Formulario -->
     <record id="view_freight_tariff_form" model="ir.ui.view">
         <field name="name">freight.tariff.form</field>
         <field name="model">freight.tariff</field>
@@ -58,31 +58,26 @@
                 </header>
                 <sheet>
                     <div class="oe_title">
-                        <label for="name" string="Referencia de Tarifa"/>
                         <h1><field name="name" readonly="1"/></h1>
                     </div>
                     <group>
-                        <group string="Logística">
-                            <field name="forwarder_id" options="{'no_create': True}"/>
+                        <group>
+                            <field name="forwarder_id"/>
                             <field name="pol_id"/>
                             <field name="pod_id"/>
                         </group>
-                        <group string="Vigencia">
+                        <group>
                             <field name="fecha_tarifa"/>
                             <field name="vigencia_fin"/>
                             <field name="equipo"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
-                    <group string="Costos y Tarifas">
-                        <group>
-                            <field name="ocean_freight"/>
-                            <field name="ams_imo"/>
-                            <field name="lib_seguro"/>
-                        </group>
-                        <group>
-                            <field name="all_in" class="oe_subtotal_footer_separator" widget="monetary"/>
-                        </group>
+                    <group string="Costos">
+                        <field name="ocean_freight"/>
+                        <field name="ams_imo"/>
+                        <field name="lib_seguro"/>
+                        <field name="all_in" class="oe_subtotal_footer_separator"/>
                     </group>
                 </sheet>
                 <div class="oe_chatter">
@@ -94,16 +89,14 @@
         </field>
     </record>
 
-    <!-- 4. ACCIÓN PARA EL MENÚ -->
+    <!-- Acción -->
     <record id="action_freight_tariff" model="ir.actions.act_window">
         <field name="name">Catálogo de Tarifas</field>
         <field name="res_model">freight.tariff</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_freight_tariff_search"/>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Crea tu primera tarifa de flete marítimo.
-            </p>
+            <p class="o_view_nocontent_smiling_face">Crea tu primera tarifa</p>
         </field>
     </record>
 </odoo>

@@ -20,13 +20,13 @@
                 
                 <separator/>
                 <!-- Agrupaciones (Estructura de Studio) -->
-                <group expand="0" string="Agrupar Por">
+                <!-- <group expand="0" string="Agrupar Por">
                     <!-- <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/> -->
                     <filter name="group_forwarder" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
                     <filter name="group_pol" string="Puerto Carga (POL)" context="{'group_by': 'pol_id'}"/>
                     <filter name="group_pod" string="Puerto Destino (POD)" context="{'group_by': 'pod_id'}"/>
                     <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
-                </group>
+                </group> -->
             </search>
         </field>
     </record>

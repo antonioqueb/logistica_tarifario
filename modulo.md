@@ -231,20 +231,15 @@ registry.category("actions").add("tarifario_dashboard_tag", TarifarioDashboard);
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
             <search string="Búsqueda de Tarifas">
-                <!-- Campos de búsqueda manual -->
                 <field name="name"/>
                 <field name="anio"/>
                 <field name="forwarder_id"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
                 
-                <separator/>
-                <!-- Filtros de Estado -->
                 <filter string="Vigentes" name="filter_active" domain="[('state', '=', 'active')]"/>
                 <filter string="Expiradas" name="filter_expired" domain="[('state', '=', 'expired')]"/>
                 
-                <separator/>
-                <!-- Agrupaciones (Estructura de Studio) -->
                 <group expand="0" string="Agrupar Por">
                     <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/>
                     <filter name="group_forwarder" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>

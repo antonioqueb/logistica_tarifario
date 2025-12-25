@@ -22,8 +22,12 @@ class FreightTariff(models.Model):
         domain="[('category_id.name', '=', 'Forwarder')]"
     )
 
-    # Naviera
-    naviera_id = fields.Many2one('res.partner', string='Naviera')
+    # Naviera (solo con etiqueta Naviera)
+    naviera_id = fields.Many2one(
+        'res.partner',
+        string='Naviera',
+        domain="[('category_id.name', '=', 'Naviera')]"
+    )
 
     # Ubicaciones
     pol_id = fields.Char(string='Puerto Carga (POL)', required=True)
@@ -47,6 +51,7 @@ class FreightTariff(models.Model):
         string='Moneda',
         default=lambda self: self.env.ref('base.USD')
     )
+    costo_exw = fields.Monetary(string='Costo EXW')
     ocean_freight = fields.Monetary(string='Ocean Freight')
     ams_imo = fields.Monetary(string='AMS + IMO')
     lib_seguro = fields.Monetary(string='Lib + Seguro')
@@ -102,27 +107,38 @@ class FreightTariff(models.Model):
             else:
                 rec.state = 'active'
 
+    def _get_or_create_tag(self, tag_name):
+        """Obtiene o crea una etiqueta de contacto"""
+        tag = self.env['res.partner.category'].search([('name', '=', tag_name)], limit=1)
+        if not tag:
+            tag = self.env['res.partner.category'].create({'name': tag_name})
+        return tag
+
+    def _assign_tag_to_partner(self, partner_id, tag):
+        """Asigna una etiqueta a un contacto si no la tiene"""
+        if partner_id:
+            partner = self.env['res.partner'].browse(partner_id)
+            if tag.id not in partner.category_id.ids:
+                partner.write({'category_id': [(4, tag.id)]})
+
     @api.model_create_multi
     def create(self, vals_list):
-        tag = self.env['res.partner.category'].search([('name', '=', 'Forwarder')], limit=1)
-        if not tag:
-            tag = self.env['res.partner.category'].create({'name': 'Forwarder'})
+        tag_forwarder = self._get_or_create_tag('Forwarder')
+        tag_naviera = self._get_or_create_tag('Naviera')
 
         for vals in vals_list:
-            if vals.get('forwarder_id'):
-                partner = self.env['res.partner'].browse(vals['forwarder_id'])
-                if tag.id not in partner.category_id.ids:
-                    partner.write({'category_id': [(4, tag.id)]})
+            self._assign_tag_to_partner(vals.get('forwarder_id'), tag_forwarder)
+            self._assign_tag_to_partner(vals.get('naviera_id'), tag_naviera)
 
         return super().create(vals_list)
 
     def write(self, vals):
         if vals.get('forwarder_id'):
-            tag = self.env['res.partner.category'].search([('name', '=', 'Forwarder')], limit=1)
-            if not tag:
-                tag = self.env['res.partner.category'].create({'name': 'Forwarder'})
-            partner = self.env['res.partner'].browse(vals['forwarder_id'])
-            if tag.id not in partner.category_id.ids:
-                partner.write({'category_id': [(4, tag.id)]})
+            tag_forwarder = self._get_or_create_tag('Forwarder')
+            self._assign_tag_to_partner(vals['forwarder_id'], tag_forwarder)
+
+        if vals.get('naviera_id'):
+            tag_naviera = self._get_or_create_tag('Naviera')
+            self._assign_tag_to_partner(vals['naviera_id'], tag_naviera)
 
         return super().write(vals)

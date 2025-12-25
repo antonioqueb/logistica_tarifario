@@ -4,5 +4,8 @@
         <record id="partner_category_forwarder" model="res.partner.category">
             <field name="name">Forwarder</field>
         </record>
+        <record id="partner_category_naviera" model="res.partner.category">
+            <field name="name">Naviera</field>
+        </record>
     </data>
 </odoo>

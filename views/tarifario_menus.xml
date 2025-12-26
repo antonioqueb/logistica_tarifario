@@ -1,7 +1,7 @@
 <odoo>
     <!-- Menú Principal -->
     <menuitem id="menu_tarifario_root" 
-              name="Logística: Tarifario" 
+              name="Tarifario" 
               web_icon="logistica_tarifario,static/description/icon.png"
               sequence="1"/>
 

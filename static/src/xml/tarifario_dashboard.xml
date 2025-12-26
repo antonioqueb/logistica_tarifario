@@ -2,15 +2,12 @@
 <templates xml:space="preserve">
     <t t-name="logistica_tarifario.DashboardMain">
         <div class="o_action tarifario-dashboard">
-            <!-- Loader -->
             <div t-if="state.loading" class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
                 <div class="spinner-border text-primary" role="status"></div>
             </div>
 
-            <!-- Main Content -->
             <div t-if="!state.loading" class="container-fluid">
-                
-                <!-- Header Moderno -->
+                <!-- Header -->
                 <div class="dashboard-header d-flex justify-content-between align-items-center">
                     <div>
                         <h2 class="fw-bold text-dark mb-1">Logística Global</h2>
@@ -25,13 +22,10 @@
                         <button class="btn btn-white shadow-sm border" t-on-click="refresh">
                             <i class="fa fa-refresh me-2 text-primary"/>Sincronizar
                         </button>
-                        <button class="btn btn-primary shadow-sm" t-on-click="openAllTarifas">
-                            <i class="fa fa-plus me-2"/>Ver Todo
-                        </button>
                     </div>
                 </div>
 
-                <!-- KPIs Principales -->
+                <!-- KPIs -->
                 <div class="row g-4 mb-4">
                     <div class="col-md-3">
                         <div class="card kpi-card p-3" t-on-click="openTarifasActivas" style="cursor:pointer;">
@@ -51,7 +45,7 @@
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <p class="card-title-custom mb-1">Promedio All In</p>
-                                    <h2 class="stat-value mb-0 text-primary">$<t t-esc="promedios.all_in"/></h2>
+                                    <h2 class="stat-value mb-0 text-primary">$<t t-esc="formatMonetary(promedios.all_in)"/></h2>
                                 </div>
                                 <div class="icon-box bg-soft-primary">
                                     <i class="fa fa-dollar fa-2x text-primary"/>
@@ -87,9 +81,8 @@
                     </div>
                 </div>
 
-                <!-- Segunda Fila: Tablas y Rankings -->
+                <!-- Tablas -->
                 <div class="row g-4 mb-4">
-                    <!-- Top Forwarders -->
                     <div class="col-lg-8">
                         <div class="card shadow-sm border-0 rounded-4">
                             <div class="card-header bg-white py-3 border-0">
@@ -111,7 +104,7 @@
                                             <tr>
                                                 <td class="fw-bold text-dark"><t t-esc="f.name"/></td>
                                                 <td class="text-center"><span class="badge rounded-pill bg-light text-dark border"><t t-esc="f.count"/></span></td>
-                                                <td class="text-end text-primary fw-bold">$<t t-esc="f.avg_all_in"/></td>
+                                                <td class="text-end text-primary fw-bold">$<t t-esc="formatMonetary(f.avg_all_in)"/></td>
                                                 <td class="text-end"><t t-esc="f.avg_transit"/> d</td>
                                                 <td class="text-end">
                                                     <button class="btn btn-sm btn-light" t-on-click="() => this.openByForwarder(f.id)">
@@ -126,7 +119,6 @@
                         </div>
                     </div>
 
-                    <!-- Top Rutas -->
                     <div class="col-lg-4">
                         <div class="card shadow-sm border-0 rounded-4 h-100">
                             <div class="card-header bg-white py-3 border-0">
@@ -142,7 +134,7 @@
                                             </div>
                                             <div class="d-flex justify-content-between small">
                                                 <span class="text-muted"><i class="fa fa-clock-o me-1"/> <t t-esc="r.avg_transit"/> días</span>
-                                                <span class="text-success fw-bold">$<t t-esc="r.avg_all_in"/></span>
+                                                <span class="text-success fw-bold">$<t t-esc="formatMonetary(r.avg_all_in)"/></span>
                                             </div>
                                         </div>
                                     </t>
@@ -152,13 +144,12 @@
                     </div>
                 </div>
 
-                <!-- Tercera Fila: Equipos -->
+                <!-- Equipos -->
                 <div class="row g-4 mb-5">
                     <div class="col-12">
                         <div class="card shadow-sm border-0 rounded-4">
-                            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between">
-                                <h5 class="fw-bold mb-0">Costos por Tipo de Equipo</h5>
-                                <span class="text-muted small">Promedios Globales</span>
+                            <div class="card-header bg-white py-3 border-0">
+                                <h5 class="fw-bold mb-0">Costos por Tipo de Equipo (Promedio)</h5>
                             </div>
                             <div class="card-body pb-4">
                                 <div class="row g-3">
@@ -166,7 +157,7 @@
                                         <div class="col-md-2">
                                             <div class="p-3 border rounded-3 text-center bg-light" t-on-click="() => this.openByEquipo(e.equipo)" style="cursor:pointer">
                                                 <div class="text-muted x-small text-uppercase mb-1"><t t-esc="e.equipo_label"/></div>
-                                                <div class="fw-bold text-dark h5 mb-0">$<t t-esc="e.avg_all_in"/></div>
+                                                <div class="fw-bold text-dark h5 mb-0">$<t t-esc="formatMonetary(e.avg_all_in)"/></div>
                                             </div>
                                         </div>
                                     </t>

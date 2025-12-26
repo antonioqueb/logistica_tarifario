@@ -301,23 +301,36 @@ class FreightTariff(models.Model):
     @api.model
     def _get_top_rutas(self, limit=5):
         """Top rutas (POL -> POD) más cotizadas"""
-        data = self.read_group(
-            [('state', '=', 'active')],
-            ['pol_id', 'pod_id', 'all_in:avg', 'transit_time:avg'],
-            ['pol_id', 'pod_id'],
-            orderby='pol_id_count desc',
-            limit=limit
-        )
+        # Usar SQL para agrupación múltiple que es más confiable
+        self.env.cr.execute("""
+            SELECT 
+                ft.pol_id,
+                pol.name as pol_name,
+                ft.pod_id,
+                pod.name as pod_name,
+                COUNT(*) as count,
+                AVG(ft.all_in) as avg_all_in,
+                AVG(ft.transit_time) as avg_transit
+            FROM freight_tariff ft
+            LEFT JOIN res_partner pol ON ft.pol_id = pol.id
+            LEFT JOIN res_partner pod ON ft.pod_id = pod.id
+            WHERE ft.state = 'active' AND ft.active = true
+            GROUP BY ft.pol_id, pol.name, ft.pod_id, pod.name
+            ORDER BY count DESC
+            LIMIT %s
+        """, (limit,))
+        
+        results = self.env.cr.dictfetchall()
         return [{
-            'pol_id': d['pol_id'][0] if d['pol_id'] else False,
-            'pol_name': d['pol_id'][1] if d['pol_id'] else '?',
-            'pod_id': d['pod_id'][0] if d['pod_id'] else False,
-            'pod_name': d['pod_id'][1] if d['pod_id'] else '?',
-            'ruta': f"{d['pol_id'][1] if d['pol_id'] else '?'} → {d['pod_id'][1] if d['pod_id'] else '?'}",
-            'count': d.get('pol_id_count', 0),
-            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
-            'avg_transit': round(d.get('transit_time', 0) or 0, 1),
-        } for d in data]
+            'pol_id': r['pol_id'],
+            'pol_name': r['pol_name'] or '?',
+            'pod_id': r['pod_id'],
+            'pod_name': r['pod_name'] or '?',
+            'ruta': f"{r['pol_name'] or '?'} → {r['pod_name'] or '?'}",
+            'count': r['count'],
+            'avg_all_in': round(r['avg_all_in'] or 0, 2),
+            'avg_transit': round(r['avg_transit'] or 0, 1),
+        } for r in results]
 
     @api.model
     def _get_stats_por_equipo(self):

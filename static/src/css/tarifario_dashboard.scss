@@ -1,0 +1,82 @@
+.tarifario-dashboard {
+    background-color: #f8f9fa;
+    height: 100%;
+    overflow-y: auto; // Habilita el scroll
+    padding: 1.5rem;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        border: 1px solid #edf2f7;
+    }
+
+    .kpi-card {
+        background: white;
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        
+        &:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+    }
+
+    .card-title-custom {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .table-custom {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #edf2f7;
+
+        thead {
+            background-color: #f1f5f9;
+            th {
+                border-bottom: none;
+                color: #475569;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                padding: 1rem;
+            }
+        }
+
+        tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+    }
+
+    // Badge styling
+    .badge-soft-primary { background: #e0e7ff; color: #4338ca; }
+    .badge-soft-success { background: #dcfce7; color: #15803d; }
+    .badge-soft-info { background: #e0f2fe; color: #0369a1; }
+}

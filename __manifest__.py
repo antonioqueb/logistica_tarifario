@@ -14,6 +14,7 @@
     ],
     'assets': {
         'web.assets_backend': [
+            'logistica_tarifario/static/src/scss/tarifario_dashboard.scss',
             'logistica_tarifario/static/src/js/tarifario_dashboard.js',
             'logistica_tarifario/static/src/xml/tarifario_dashboard.xml',
         ],

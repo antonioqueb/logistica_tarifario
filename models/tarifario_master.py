@@ -29,9 +29,19 @@ class FreightTariff(models.Model):
         domain="[('category_id.name', '=', 'Naviera')]"
     )
 
-    # Ubicaciones
-    pol_id = fields.Char(string='Puerto Carga (POL)', required=True)
-    pod_id = fields.Char(string='Puerto Destino (POD)', required=True)
+    # Ubicaciones (con etiquetas POL y POD)
+    pol_id = fields.Many2one(
+        'res.partner',
+        string='Puerto Carga (POL)',
+        required=True,
+        domain="[('category_id.name', '=', 'POL')]"
+    )
+    pod_id = fields.Many2one(
+        'res.partner',
+        string='Puerto Destino (POD)',
+        required=True,
+        domain="[('category_id.name', '=', 'POD')]"
+    )
 
     # Periodo
     anio = fields.Char(
@@ -103,7 +113,6 @@ class FreightTariff(models.Model):
         ('roro',  "RoRo (Roll-on/Roll-off)"),
     ], string='Equipo', required=True, default='20st')
 
-
     state = fields.Selection([
         ('active', 'Vigente'),
         ('expired', 'Expirada')
@@ -115,8 +124,8 @@ class FreightTariff(models.Model):
             parts = [
                 rec.country_id.name or '',
                 rec.forwarder_id.name or '',
-                rec.pol_id or '',
-                rec.pod_id or '',
+                rec.pol_id.name or '',
+                rec.pod_id.name or '',
                 rec.anio or ''
             ]
             rec.name = ' | '.join(filter(None, parts))
@@ -161,22 +170,30 @@ class FreightTariff(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        tag_forwarder = self._get_or_create_tag('Forwarder')
-        tag_naviera = self._get_or_create_tag('Naviera')
+        tags = {
+            'forwarder_id': self._get_or_create_tag('Forwarder'),
+            'naviera_id': self._get_or_create_tag('Naviera'),
+            'pol_id': self._get_or_create_tag('POL'),
+            'pod_id': self._get_or_create_tag('POD'),
+        }
 
         for vals in vals_list:
-            self._assign_tag_to_partner(vals.get('forwarder_id'), tag_forwarder)
-            self._assign_tag_to_partner(vals.get('naviera_id'), tag_naviera)
+            for field, tag in tags.items():
+                self._assign_tag_to_partner(vals.get(field), tag)
 
         return super().create(vals_list)
 
     def write(self, vals):
-        if vals.get('forwarder_id'):
-            tag_forwarder = self._get_or_create_tag('Forwarder')
-            self._assign_tag_to_partner(vals['forwarder_id'], tag_forwarder)
+        field_tag_map = {
+            'forwarder_id': 'Forwarder',
+            'naviera_id': 'Naviera',
+            'pol_id': 'POL',
+            'pod_id': 'POD',
+        }
 
-        if vals.get('naviera_id'):
-            tag_naviera = self._get_or_create_tag('Naviera')
-            self._assign_tag_to_partner(vals['naviera_id'], tag_naviera)
+        for field, tag_name in field_tag_map.items():
+            if vals.get(field):
+                tag = self._get_or_create_tag(tag_name)
+                self._assign_tag_to_partner(vals[field], tag)
 
         return super().write(vals)

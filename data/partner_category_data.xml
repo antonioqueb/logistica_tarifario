@@ -7,5 +7,11 @@
         <record id="partner_category_naviera" model="res.partner.category">
             <field name="name">Naviera</field>
         </record>
+        <record id="partner_category_pol" model="res.partner.category">
+            <field name="name">POL</field>
+        </record>
+        <record id="partner_category_pod" model="res.partner.category">
+            <field name="name">POD</field>
+        </record>
     </data>
 </odoo>

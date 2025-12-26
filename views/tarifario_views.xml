@@ -73,8 +73,8 @@
                             <field name="country_id"/>
                             <field name="forwarder_id" options="{'no_quick_create': True}"/>
                             <field name="naviera_id" options="{'no_quick_create': True}"/>
-                            <field name="pol_id"/>
-                            <field name="pod_id"/>
+                            <field name="pol_id" options="{'no_quick_create': True}"/>
+                            <field name="pod_id" options="{'no_quick_create': True}"/>
                         </group>
                         <group string="Periodo y Equipo">
                             <field name="anio"/>

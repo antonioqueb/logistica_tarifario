@@ -88,7 +88,7 @@
                             <div class="card-header bg-white py-3 border-0">
                                 <h5 class="fw-bold mb-0 text-dark">Rendimiento de Forwarders</h5>
                             </div>
-                            <div class="table-responsive">
+                            <div class="scrollable-table-container">
                                 <table class="table table-custom mb-0">
                                     <thead>
                                         <tr>
@@ -124,7 +124,7 @@
                             <div class="card-header bg-white py-3 border-0">
                                 <h5 class="fw-bold mb-0 text-dark">Rutas Frecuentes</h5>
                             </div>
-                            <div class="card-body p-0">
+                            <div class="scrollable-list">
                                 <div class="list-group list-group-flush">
                                     <t t-foreach="topRutas" t-as="r" t-key="r_index">
                                         <div class="list-group-item border-0 px-4 py-3" t-on-click="() => this.openByRuta(r.pol_id, r.pod_id)" style="cursor:pointer">

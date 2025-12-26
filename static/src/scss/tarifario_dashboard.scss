@@ -1,9 +1,15 @@
 .tarifario-dashboard {
     background-color: #f8f9fa;
-    height: 100%;
-    overflow-y: auto; // Habilita el scroll
+    min-height: 100%;
+    height: auto !important;
+    overflow: visible !important;
     padding: 1.5rem;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    &.o_action {
+        overflow: auto !important;
+        height: 100% !important;
+    }
 
     .dashboard-header {
         margin-bottom: 2rem;
@@ -50,14 +56,57 @@
         color: #1e293b;
     }
 
+    // Scroll interno para tablas
+    .scrollable-table-container {
+        max-height: 320px;
+        overflow-y: auto;
+        
+        &::-webkit-scrollbar {
+            width: 6px;
+        }
+        &::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+            &:hover { background: #94a3b8; }
+        }
+    }
+
+    // Scroll interno para listas
+    .scrollable-list {
+        max-height: 320px;
+        overflow-y: auto;
+        
+        &::-webkit-scrollbar {
+            width: 6px;
+        }
+        &::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+            &:hover { background: #94a3b8; }
+        }
+    }
+
     .table-custom {
         background: white;
         border-radius: 12px;
         overflow: hidden;
         border: 1px solid #edf2f7;
+        margin-bottom: 0;
 
         thead {
             background-color: #f1f5f9;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            
             th {
                 border-bottom: none;
                 color: #475569;
@@ -75,7 +124,6 @@
         }
     }
 
-    // Badge styling
     .badge-soft-primary { background: #e0e7ff; color: #4338ca; }
     .badge-soft-success { background: #dcfce7; color: #15803d; }
     .badge-soft-info { background: #e0f2fe; color: #0369a1; }

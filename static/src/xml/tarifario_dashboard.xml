@@ -1,34 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="logistica_tarifario.DashboardMain" owl="1">
-        <div class="o_action_manager o_content bg-100 p-4">
-            <div class="row m-0">
-                <div class="col-12 mb-4">
-                    <h2 class="fw-bold">Indicadores de Gestión de Tarifas</h2>
-                </div>
-                <!-- Card 1 -->
-                <div class="col-md-4">
-                    <div class="card shadow-sm border-0 bg-primary text-white p-3">
-                        <div class="card-title text-uppercase opacity-75">Tarifa Promedio Global</div>
-                        <div class="h2 fw-bold">$ <t t-esc="stats[0] ? stats[0].all_in : '0'"/></div>
-                        <div class="mt-2"><i class="fa fa-line-chart"/> Actualizado este mes</div>
-                    </div>
-                </div>
-                <!-- Card 2 -->
-                <div class="col-md-4">
-                    <div class="card shadow-sm border-0 bg-success text-white p-3">
-                        <div class="card-title text-uppercase opacity-75">Tarifas Activas</div>
-                        <div class="h2 fw-bold"><t t-esc="stats[0] ? stats[0].id_count : '0'"/> Registros</div>
-                        <div class="mt-2"><i class="fa fa-check-circle"/> Listas para embarque</div>
-                    </div>
+    <t t-name="logistica_tarifario.DashboardMain">
+        <div class="o_action tarifario-dashboard">
+            <!-- Loading State -->
+            <div t-if="state.loading" class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+                <div class="text-center">
+                    <i class="fa fa-spinner fa-spin fa-3x text-primary mb-3"/>
+                    <p class="text-muted">Cargando indicadores...</p>
                 </div>
             </div>
-            
-            <div class="row m-0 mt-5">
-                <div class="col-12 bg-white p-5 rounded shadow-sm text-center">
-                    <i class="fa fa-ship fa-4x text-200 mb-3"/>
-                    <h3>Bienvenido al Historial de Tarifas</h3>
-                    <p class="text-muted">Utiliza los filtros de <b>Año</b> y <b>Mes</b> en el menú de Catálogo para comparar los montos históricos.</p>
+
+            <!-- Error State -->
+            <div t-if="state.error and !state.loading" class="alert alert-danger m-4">
+                <i class="fa fa-exclamation-triangle me-2"/>
+                Error: <t t-esc="state.error"/>
+                <button class="btn btn-sm btn-outline-danger ms-3" t-on-click="refresh">Reintentar</button>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div t-if="!state.loading and !state.error" class="p-4">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="mb-1 fw-bold text-dark">
+                            <i class="fa fa-ship text-primary me-2"/>
+                            Panel de Control - Tarifario Logístico
+                        </h2>
+                        <p class="text-muted mb-0">Indicadores de gestión para el departamento de importaciones</p>
+                    </div>
+                    <button class="btn btn-outline-primary" t-on-click="refresh">
+                        <i class="fa fa-refresh me-1"/> Actualizar
+                    </button>
                 </div>
+
+                <!-- KPIs Principales (4 cards) -->
+                <div class="row g-3 mb-4">
+                    <!-- Total Tarifas -->
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" t-on-click="openAllTarifas">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted text-uppercase small mb-1">Total Tarifas</p>
+                                        <h3 class="fw-bold mb-0 text-dark"><t t-esc="state.totalTarifas"/></h3>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 d-flex align-items-center">
+                                        <i class="fa fa-database fa-lg text-primary"/>
+                                    </div>
+                                </div>
+                                <small class="text-muted"><i class="fa fa-info-circle me-1"/>Click para ver todas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarifas Activas -->
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" t-on-click="openTarifasActivas">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted text-uppercase small mb-1">Tarifas Vigentes</p>
+                                        <h3 class="fw-bold mb-0 text-success"><t t-esc="state.tarifasActivas"/></h3>
+                                    </div>
+                                    <div class="bg-success bg-opacity-10 rounded-circle p-3 d-flex align-items-center">
+                                        <i class="fa fa-check-circle fa-lg text-success"/>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 4px;">
+                                    <div class="progress-bar bg-success" 
+                                         t-attf-style="width: #{state.totalTarifas > 0 ? (state.tarifasActivas / state.totalTarifas * 100) : 0}%"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarifas Expiradas -->
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" t-on-click="openTarifasExpiradas">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted text-uppercase small mb-1">Tarifas Expiradas</p>
+                                        <h3 class="fw-bold mb-0 text-danger"><t t-esc="state.tarifasExpiradas"/></h3>
+                                    </div>
+                                    <div class="bg-danger bg-opacity-10 rounded-circle p-3 d-flex align-items-center">
+                                        <i class="fa fa-clock-o fa-lg text-danger"/>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 4px;">
+                                    <div class="progress-bar bg-danger" 
+                                         t-attf-style="width: #{state.totalTarifas > 0 ? (state.tarifasExpiradas / state.totalTarifas * 100) : 0}%"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Promedio ALL IN -->
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-white-50 text-uppercase small mb-1">Promedio ALL IN</p>
+                                        <h3 class="fw-bold mb-0">$<t t-esc="state.promedioAllIn"/></h3>
+                                    </div>
+                                    <div class="bg-white bg-opacity-25 rounded-circle p-3 d-flex align-items-center">
+                                        <i class="fa fa-dollar fa-lg"/>
+                                    </div>
+                                </div>
+                                <small class="text-white-50"><i class="fa fa-info-circle me-1"/>Solo tarifas vigentes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Segunda fila: Costos y Tiempos -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="fa fa-anchor fa-2x text-info mb-2"/>
+                                <p class="text-muted small mb-1">Ocean Freight Prom.</p>
+                                <h4 class="fw-bold text-info">$<t t-esc="state.promedioOceanFreight"/></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="fa fa-file-text-o fa-2x text-warning mb-2"/>
+                                <p class="text-muted small mb-1">AMS + IMO Prom.</p>
+                                <h4 class="fw-bold text-warning">$<t t-esc="state.promedioAmsImo"/></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="fa fa-calendar fa-2x text-secondary mb-2"/>
+                                <p class="text-muted small mb-1">Transit Time Prom.</p>
+                                <h4 class="fw-bold text-secondary"><t t-esc="state.transitTimePromedio"/> días</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="fa fa-hourglass-half fa-2x text-purple mb-2" style="color: #6f42c1;"/>
+                                <p class="text-muted small mb-1">Free Time Prom.</p>
+                                <h4 class="fw-bold" style="color: #6f42c1;"><t t-esc="state.demorasPromedio"/> días</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tercera fila: Tablas -->
+                <div class="row g-3 mb-4">
+                    <!-- Top Forwarders -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-transparent border-0 pb-0">
+                                <h6 class="fw-bold mb-0"><i class="fa fa-truck text-primary me-2"/>Top Forwarders</h6>
+                            </div>
+                            <div class="card-body pt-2">
+                                <t t-if="state.topForwarders.length === 0">
+                                    <p class="text-muted text-center small">Sin datos</p>
+                                </t>
+                                <table t-else="" class="table table-sm table-borderless mb-0">
+                                    <tbody>
+                                        <t t-foreach="state.topForwarders" t-as="f" t-key="f.name">
+                                            <tr>
+                                                <td class="ps-0">
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary me-2"><t t-esc="f_index + 1"/></span>
+                                                    <span class="small"><t t-esc="f.name"/></span>
+                                                </td>
+                                                <td class="text-end pe-0">
+                                                    <span class="badge bg-light text-dark"><t t-esc="f.count"/> tarifas</span>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Navieras -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-transparent border-0 pb-0">
+                                <h6 class="fw-bold mb-0"><i class="fa fa-ship text-info me-2"/>Top Navieras</h6>
+                            </div>
+                            <div class="card-body pt-2">
+                                <t t-if="state.topNavieras.length === 0">
+                                    <p class="text-muted text-center small">Sin datos</p>
+                                </t>
+                                <table t-else="" class="table table-sm table-borderless mb-0">
+                                    <tbody>
+                                        <t t-foreach="state.topNavieras" t-as="n" t-key="n.name">
+                                            <tr>
+                                                <td class="ps-0">
+                                                    <span class="badge bg-info bg-opacity-10 text-info me-2"><t t-esc="n_index + 1"/></span>
+                                                    <span class="small"><t t-esc="n.name"/></span>
+                                                </td>
+                                                <td class="text-end pe-0">
+                                                    <span class="badge bg-light text-dark">$<t t-esc="n.avgAllIn"/> prom</span>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Rutas -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-transparent border-0 pb-0">
+                                <h6 class="fw-bold mb-0"><i class="fa fa-map-marker text-success me-2"/>Top Rutas</h6>
+                            </div>
+                            <div class="card-body pt-2">
+                                <t t-if="state.topRutas.length === 0">
+                                    <p class="text-muted text-center small">Sin datos</p>
+                                </t>
+                                <table t-else="" class="table table-sm table-borderless mb-0">
+                                    <tbody>
+                                        <t t-foreach="state.topRutas" t-as="r" t-key="r_index">
+                                            <tr>
+                                                <td class="ps-0">
+                                                    <span class="small text-truncate d-inline-block" style="max-width: 150px;">
+                                                        <t t-esc="r.pol"/> → <t t-esc="r.pod"/>
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-0">
+                                                    <span class="badge bg-success bg-opacity-10 text-success"><t t-esc="r.count"/></span>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cuarta fila: Equipos y Países -->
+                <div class="row g-3 mb-4">
+                    <!-- Por Equipo -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-transparent border-0 pb-0">
+                                <h6 class="fw-bold mb-0"><i class="fa fa-cube text-warning me-2"/>Tarifas por Tipo de Equipo</h6>
+                            </div>
+                            <div class="card-body pt-2">
+                                <t t-if="state.statsByEquipo.length === 0">
+                                    <p class="text-muted text-center">Sin datos de equipos</p>
+                                </t>
+                                <div t-else="" class="row">
+                                    <t t-foreach="state.statsByEquipo" t-as="e" t-key="e.equipo">
+                                        <div class="col-6 col-md-4 mb-3">
+                                            <div class="border rounded p-2 text-center bg-light">
+                                                <p class="fw-bold mb-0 text-dark"><t t-esc="e.equipo"/></p>
+                                                <small class="text-muted d-block"><t t-esc="e.count"/> tarifas</small>
+                                                <small class="text-success">$<t t-esc="e.avgAllIn"/></small>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Por País -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-transparent border-0 pb-0">
+                                <h6 class="fw-bold mb-0"><i class="fa fa-globe text-danger me-2"/>Tarifas por País de Origen</h6>
+                            </div>
+                            <div class="card-body pt-2">
+                                <t t-if="state.statsByCountry.length === 0">
+                                    <p class="text-muted text-center">Sin datos de países</p>
+                                </t>
+                                <t t-else="">
+                                    <t t-foreach="state.statsByCountry" t-as="c" t-key="c.name">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="small"><i class="fa fa-flag-o me-2 text-muted"/><t t-esc="c.name"/></span>
+                                            <div>
+                                                <span class="badge bg-secondary me-1"><t t-esc="c.count"/></span>
+                                                <span class="badge bg-success">$<t t-esc="c.avgAllIn"/></span>
+                                            </div>
+                                        </div>
+                                        <div class="progress mb-3" style="height: 6px;">
+                                            <div class="progress-bar bg-danger bg-opacity-75" 
+                                                 t-attf-style="width: #{state.statsByCountry[0] ? (c.count / state.statsByCountry[0].count * 100) : 0}%"/>
+                                        </div>
+                                    </t>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quinta fila: Tendencia Mensual -->
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-transparent border-0 pb-0">
+                                <h6 class="fw-bold mb-0"><i class="fa fa-line-chart text-primary me-2"/>Tendencia de Tarifas (Últimos 12 periodos)</h6>
+                            </div>
+                            <div class="card-body">
+                                <t t-if="state.tendenciaMensual.length === 0">
+                                    <p class="text-muted text-center">Sin datos históricos</p>
+                                </t>
+                                <div t-else="" class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Periodo</th>
+                                                <th class="text-center">Cantidad</th>
+                                                <th class="text-end">Promedio ALL IN</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="state.tendenciaMensual" t-as="t" t-key="t.periodo">
+                                                <tr>
+                                                    <td><span class="badge bg-light text-dark"><t t-esc="t.periodo"/></span></td>
+                                                    <td class="text-center"><t t-esc="t.count"/></td>
+                                                    <td class="text-end fw-bold text-success">$<t t-esc="t.avgAllIn"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </t>

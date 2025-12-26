@@ -268,16 +268,16 @@ class FreightTariff(models.Model):
             [('state', '=', 'active')],
             ['forwarder_id', 'all_in:avg', 'ocean_freight:avg', 'transit_time:avg'],
             ['forwarder_id'],
-            orderby='__count desc',
+            orderby='forwarder_id_count desc',
             limit=limit
         )
         return [{
             'id': d['forwarder_id'][0] if d['forwarder_id'] else False,
             'name': d['forwarder_id'][1] if d['forwarder_id'] else 'Sin asignar',
-            'count': d['__count'],
-            'avg_all_in': round(d['all_in'] or 0, 2),
-            'avg_ocean': round(d['ocean_freight'] or 0, 2),
-            'avg_transit': round(d['transit_time'] or 0, 1),
+            'count': d.get('forwarder_id_count', 0),
+            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
+            'avg_ocean': round(d.get('ocean_freight', 0) or 0, 2),
+            'avg_transit': round(d.get('transit_time', 0) or 0, 1),
         } for d in data]
 
     @api.model
@@ -287,15 +287,15 @@ class FreightTariff(models.Model):
             [('state', '=', 'active'), ('naviera_id', '!=', False)],
             ['naviera_id', 'all_in:avg', 'ocean_freight:avg'],
             ['naviera_id'],
-            orderby='__count desc',
+            orderby='naviera_id_count desc',
             limit=limit
         )
         return [{
             'id': d['naviera_id'][0] if d['naviera_id'] else False,
             'name': d['naviera_id'][1] if d['naviera_id'] else 'Sin asignar',
-            'count': d['__count'],
-            'avg_all_in': round(d['all_in'] or 0, 2),
-            'avg_ocean': round(d['ocean_freight'] or 0, 2),
+            'count': d.get('naviera_id_count', 0),
+            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
+            'avg_ocean': round(d.get('ocean_freight', 0) or 0, 2),
         } for d in data]
 
     @api.model
@@ -303,9 +303,9 @@ class FreightTariff(models.Model):
         """Top rutas (POL -> POD) más cotizadas"""
         data = self.read_group(
             [('state', '=', 'active')],
-            ['pol_id', 'pod_id', 'all_in:avg', 'all_in:min', 'all_in:max', 'transit_time:avg'],
+            ['pol_id', 'pod_id', 'all_in:avg', 'transit_time:avg'],
             ['pol_id', 'pod_id'],
-            orderby='__count desc',
+            orderby='pol_id_count desc',
             limit=limit
         )
         return [{
@@ -314,11 +314,9 @@ class FreightTariff(models.Model):
             'pod_id': d['pod_id'][0] if d['pod_id'] else False,
             'pod_name': d['pod_id'][1] if d['pod_id'] else '?',
             'ruta': f"{d['pol_id'][1] if d['pol_id'] else '?'} → {d['pod_id'][1] if d['pod_id'] else '?'}",
-            'count': d['__count'],
-            'avg_all_in': round(d['all_in'] or 0, 2),
-            'min_all_in': round(d.get('all_in:min') or d['all_in'] or 0, 2),
-            'max_all_in': round(d.get('all_in:max') or d['all_in'] or 0, 2),
-            'avg_transit': round(d['transit_time'] or 0, 1),
+            'count': d.get('pol_id_count', 0),
+            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
+            'avg_transit': round(d.get('transit_time', 0) or 0, 1),
         } for d in data]
 
     @api.model
@@ -328,15 +326,15 @@ class FreightTariff(models.Model):
             [('state', '=', 'active')],
             ['equipo', 'all_in:avg', 'ocean_freight:avg'],
             ['equipo'],
-            orderby='__count desc'
+            orderby='equipo_count desc'
         )
         equipo_labels = dict(self._fields['equipo'].selection)
         return [{
             'equipo': d['equipo'],
             'equipo_label': equipo_labels.get(d['equipo'], d['equipo']),
-            'count': d['__count'],
-            'avg_all_in': round(d['all_in'] or 0, 2),
-            'avg_ocean': round(d['ocean_freight'] or 0, 2),
+            'count': d.get('equipo_count', 0),
+            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
+            'avg_ocean': round(d.get('ocean_freight', 0) or 0, 2),
         } for d in data]
 
     @api.model
@@ -346,16 +344,16 @@ class FreightTariff(models.Model):
             [('state', '=', 'active')],
             ['country_id', 'all_in:avg', 'ocean_freight:avg', 'transit_time:avg'],
             ['country_id'],
-            orderby='__count desc',
+            orderby='country_id_count desc',
             limit=limit
         )
         return [{
             'country_id': d['country_id'][0] if d['country_id'] else False,
             'country_name': d['country_id'][1] if d['country_id'] else 'Sin país',
-            'count': d['__count'],
-            'avg_all_in': round(d['all_in'] or 0, 2),
-            'avg_ocean': round(d['ocean_freight'] or 0, 2),
-            'avg_transit': round(d['transit_time'] or 0, 1),
+            'count': d.get('country_id_count', 0),
+            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
+            'avg_ocean': round(d.get('ocean_freight', 0) or 0, 2),
+            'avg_transit': round(d.get('transit_time', 0) or 0, 1),
         } for d in data]
 
     @api.model
@@ -377,9 +375,9 @@ class FreightTariff(models.Model):
             'anio': d['anio'],
             'mes': d['mes'],
             'periodo': f"{meses_nombres.get(d['mes'], d['mes'])}/{d['anio']}",
-            'count': d['__count'],
-            'avg_all_in': round(d['all_in'] or 0, 2),
-            'avg_ocean': round(d['ocean_freight'] or 0, 2),
+            'count': d.get('anio_count', 0),
+            'avg_all_in': round(d.get('all_in', 0) or 0, 2),
+            'avg_ocean': round(d.get('ocean_freight', 0) or 0, 2),
         } for d in data]
         return list(reversed(result))
 

@@ -144,29 +144,6 @@
                     </div>
                 </div>
 
-                <!-- Equipos -->
-                <div class="row g-4 mb-5">
-                    <div class="col-12">
-                        <div class="card shadow-sm border-0 rounded-4">
-                            <div class="card-header bg-white py-3 border-0">
-                                <h5 class="fw-bold mb-0">Costos por Tipo de Equipo (Promedio)</h5>
-                            </div>
-                            <div class="card-body pb-4">
-                                <div class="row g-3">
-                                    <t t-foreach="porEquipo" t-as="e" t-key="e.equipo">
-                                        <div class="col-md-2">
-                                            <div class="p-3 border rounded-3 text-center bg-light" t-on-click="() => this.openByEquipo(e.equipo)" style="cursor:pointer">
-                                                <div class="text-muted x-small text-uppercase mb-1"><t t-esc="e.equipo_label"/></div>
-                                                <div class="fw-bold text-dark h5 mb-0">$<t t-esc="formatMonetary(e.avg_all_in)"/></div>
-                                            </div>
-                                        </div>
-                                    </t>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </t>

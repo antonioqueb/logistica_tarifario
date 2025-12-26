@@ -13,30 +13,7 @@ export class TarifarioDashboard extends Component {
         this.state = useState({
             loading: true,
             error: null,
-            // Resumen general
-            totalTarifas: 0,
-            tarifasActivas: 0,
-            tarifasExpiradas: 0,
-            promedioAllIn: 0,
-            // Por estado
-            statsByState: [],
-            // Por equipo
-            statsByEquipo: [],
-            // Por forwarder (top 5)
-            topForwarders: [],
-            // Por naviera
-            topNavieras: [],
-            // Por ruta (POL-POD)
-            topRutas: [],
-            // Por país
-            statsByCountry: [],
-            // Tendencia mensual (último año)
-            tendenciaMensual: [],
-            // Comparativo de costos
-            promedioOceanFreight: 0,
-            promedioAmsImo: 0,
-            transitTimePromedio: 0,
-            demorasPromedio: 0,
+            data: null,
         });
 
         onWillStart(async () => {
@@ -49,116 +26,9 @@ export class TarifarioDashboard extends Component {
             this.state.loading = true;
             this.state.error = null;
 
-            // 1. Total de tarifas
-            const allTariffs = await this.orm.searchCount("freight.tariff", []);
-            this.state.totalTarifas = allTariffs;
-
-            // 2. Tarifas por estado
-            const activeCount = await this.orm.searchCount("freight.tariff", [["state", "=", "active"]]);
-            const expiredCount = await this.orm.searchCount("freight.tariff", [["state", "=", "expired"]]);
-            this.state.tarifasActivas = activeCount;
-            this.state.tarifasExpiradas = expiredCount;
-
-            // 3. Promedios generales (solo tarifas activas)
-            const avgData = await this.orm.readGroup(
-                "freight.tariff",
-                [["state", "=", "active"]],
-                ["all_in:avg", "ocean_freight:avg", "ams_imo:avg", "transit_time:avg", "demoras:avg"],
-                []
-            );
-            
-            if (avgData.length > 0) {
-                this.state.promedioAllIn = this._formatNumber(avgData[0].all_in || 0);
-                this.state.promedioOceanFreight = this._formatNumber(avgData[0].ocean_freight || 0);
-                this.state.promedioAmsImo = this._formatNumber(avgData[0].ams_imo || 0);
-                this.state.transitTimePromedio = Math.round(avgData[0].transit_time || 0);
-                this.state.demorasPromedio = Math.round(avgData[0].demoras || 0);
-            }
-
-            // 4. Stats por equipo (top 6)
-            const equipoStats = await this.orm.readGroup(
-                "freight.tariff",
-                [["state", "=", "active"]],
-                ["equipo", "all_in:avg", "__count"],
-                ["equipo"],
-                { limit: 6, orderby: "__count desc" }
-            );
-            this.state.statsByEquipo = equipoStats.map(e => ({
-                equipo: this._formatEquipo(e.equipo),
-                count: e.__count,
-                avgAllIn: this._formatNumber(e.all_in || 0)
-            }));
-
-            // 5. Top forwarders
-            const forwarderStats = await this.orm.readGroup(
-                "freight.tariff",
-                [["state", "=", "active"]],
-                ["forwarder_id", "all_in:avg", "__count"],
-                ["forwarder_id"],
-                { limit: 5, orderby: "__count desc" }
-            );
-            this.state.topForwarders = forwarderStats.map(f => ({
-                name: f.forwarder_id ? f.forwarder_id[1] : "Sin asignar",
-                count: f.__count,
-                avgAllIn: this._formatNumber(f.all_in || 0)
-            }));
-
-            // 6. Top navieras
-            const navieraStats = await this.orm.readGroup(
-                "freight.tariff",
-                [["state", "=", "active"], ["naviera_id", "!=", false]],
-                ["naviera_id", "all_in:avg", "__count"],
-                ["naviera_id"],
-                { limit: 5, orderby: "__count desc" }
-            );
-            this.state.topNavieras = navieraStats.map(n => ({
-                name: n.naviera_id ? n.naviera_id[1] : "Sin asignar",
-                count: n.__count,
-                avgAllIn: this._formatNumber(n.all_in || 0)
-            }));
-
-            // 7. Top rutas (POL -> POD)
-            const rutaStats = await this.orm.readGroup(
-                "freight.tariff",
-                [["state", "=", "active"]],
-                ["pol_id", "pod_id", "all_in:avg", "__count"],
-                ["pol_id", "pod_id"],
-                { limit: 5, orderby: "__count desc" }
-            );
-            this.state.topRutas = rutaStats.map(r => ({
-                pol: r.pol_id ? r.pol_id[1] : "?",
-                pod: r.pod_id ? r.pod_id[1] : "?",
-                count: r.__count,
-                avgAllIn: this._formatNumber(r.all_in || 0)
-            }));
-
-            // 8. Por país
-            const countryStats = await this.orm.readGroup(
-                "freight.tariff",
-                [["state", "=", "active"]],
-                ["country_id", "all_in:avg", "__count"],
-                ["country_id"],
-                { limit: 5, orderby: "__count desc" }
-            );
-            this.state.statsByCountry = countryStats.map(c => ({
-                name: c.country_id ? c.country_id[1] : "Sin país",
-                count: c.__count,
-                avgAllIn: this._formatNumber(c.all_in || 0)
-            }));
-
-            // 9. Tendencia mensual (agrupado por año-mes)
-            const tendencia = await this.orm.readGroup(
-                "freight.tariff",
-                [],
-                ["anio", "mes", "all_in:avg", "__count"],
-                ["anio", "mes"],
-                { orderby: "anio desc, mes desc", limit: 12 }
-            );
-            this.state.tendenciaMensual = tendencia.reverse().map(t => ({
-                periodo: `${this._formatMes(t.mes)}/${t.anio}`,
-                count: t.__count,
-                avgAllIn: this._formatNumber(t.all_in || 0)
-            }));
+            // Una sola llamada al backend
+            const data = await this.orm.call("freight.tariff", "get_dashboard_data", []);
+            this.state.data = data;
 
         } catch (error) {
             console.error("Error cargando dashboard:", error);
@@ -168,30 +38,75 @@ export class TarifarioDashboard extends Component {
         }
     }
 
-    _formatNumber(num) {
-        return parseFloat(num || 0).toFixed(2);
+    // Getters para acceso fácil en template
+    get resumen() {
+        return this.state.data?.resumen || {};
     }
 
-    _formatMes(mes) {
-        const meses = {
-            '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
-            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
-            '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'
-        };
-        return meses[mes] || mes;
+    get promedios() {
+        return this.state.data?.promedios || {};
     }
 
-    _formatEquipo(equipo) {
-        const equipos = {
-            '20st': "20' ST", '40st': "40' ST", '40hc': "40' HC",
-            '45hc': "45' HC", '20rf': "20' RF", '40rf': "40' RF",
-            '40rh': "40' RH", 'lcl': "LCL", 'bbk': "BBK",
-            '20ot': "20' OT", '40ot': "40' OT", '20fr': "20' FR",
-            '40fr': "40' FR", 'roro': "RoRo"
-        };
-        return equipos[equipo] || equipo;
+    get topForwarders() {
+        return this.state.data?.top_forwarders || [];
     }
 
+    get topNavieras() {
+        return this.state.data?.top_navieras || [];
+    }
+
+    get topRutas() {
+        return this.state.data?.top_rutas || [];
+    }
+
+    get porEquipo() {
+        return this.state.data?.por_equipo || [];
+    }
+
+    get porPais() {
+        return this.state.data?.por_pais || [];
+    }
+
+    get tendencia() {
+        return this.state.data?.tendencia || [];
+    }
+
+    get variaciones() {
+        return this.state.data?.variaciones || {};
+    }
+
+    get alertas() {
+        return this.state.data?.alertas || [];
+    }
+
+    get comparativoEquipos() {
+        return this.state.data?.comparativo_equipos || [];
+    }
+
+    // Helpers
+    formatNumber(num) {
+        return parseFloat(num || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    getVariacionClass(valor) {
+        if (valor > 0) return 'text-danger';
+        if (valor < 0) return 'text-success';
+        return 'text-muted';
+    }
+
+    getVariacionIcon(valor) {
+        if (valor > 0) return 'fa-arrow-up';
+        if (valor < 0) return 'fa-arrow-down';
+        return 'fa-minus';
+    }
+
+    getTendenciaClass(tendencia) {
+        if (tendencia === 'alza') return 'text-danger';
+        if (tendencia === 'baja') return 'text-success';
+        return 'text-warning';
+    }
+
+    // Acciones
     async refresh() {
         await this.loadDashboardData();
     }
@@ -225,6 +140,65 @@ export class TarifarioDashboard extends Component {
             res_model: "freight.tariff",
             view_mode: "list,form",
             domain: [],
+            context: {},
+        });
+    }
+
+    openByForwarder(forwarderId) {
+        if (!forwarderId) return;
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Tarifas por Forwarder",
+            res_model: "freight.tariff",
+            view_mode: "list,form",
+            domain: [["forwarder_id", "=", forwarderId], ["state", "=", "active"]],
+            context: {},
+        });
+    }
+
+    openByNaviera(navieraId) {
+        if (!navieraId) return;
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Tarifas por Naviera",
+            res_model: "freight.tariff",
+            view_mode: "list,form",
+            domain: [["naviera_id", "=", navieraId], ["state", "=", "active"]],
+            context: {},
+        });
+    }
+
+    openByRuta(polId, podId) {
+        if (!polId || !podId) return;
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Tarifas por Ruta",
+            res_model: "freight.tariff",
+            view_mode: "list,form",
+            domain: [["pol_id", "=", polId], ["pod_id", "=", podId], ["state", "=", "active"]],
+            context: {},
+        });
+    }
+
+    openByEquipo(equipo) {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: `Tarifas - ${equipo}`,
+            res_model: "freight.tariff",
+            view_mode: "list,form",
+            domain: [["equipo", "=", equipo], ["state", "=", "active"]],
+            context: {},
+        });
+    }
+
+    openByPais(countryId) {
+        if (!countryId) return;
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Tarifas por País",
+            res_model: "freight.tariff",
+            view_mode: "list,form",
+            domain: [["country_id", "=", countryId], ["state", "=", "active"]],
             context: {},
         });
     }

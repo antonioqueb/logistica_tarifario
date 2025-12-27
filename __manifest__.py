@@ -6,11 +6,13 @@
     'summary': 'Control histórico de tarifas, KPIs y catálogo de fletes marítimos',
     'depends': ['base', 'web', 'mail', 'contacts'],
     'data': [
+        'security/security.xml',
         'security/ir.model.access.csv',
         'data/partner_category_data.xml',
         'views/tarifario_views.xml',
         'views/tarifario_menus.xml',
         'views/dashboard_kpi.xml',
+        
     ],
     'assets': {
         'web.assets_backend': [

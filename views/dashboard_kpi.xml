@@ -8,5 +8,6 @@
               name="Dashboard KPIs" 
               parent="menu_tarifario_root" 
               action="action_tarifario_dashboard" 
-              sequence="1"/>
+              sequence="1"
+              groups="group_tarifario_admin"/>
 </odoo>

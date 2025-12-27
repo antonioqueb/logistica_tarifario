@@ -1,4 +1,2 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_freight_tariff_user,freight.tariff.user,model_freight_tariff,group_tarifario_user,1,0,0,0
-access_freight_tariff_operator,freight.tariff.operator,model_freight_tariff,group_tarifario_operator,1,1,1,0
-access_freight_tariff_manager,freight.tariff.manager,model_freight_tariff,group_tarifario_manager,1,1,1,1
+access_freight_tariff_admin,freight.tariff.admin,model_freight_tariff,group_tarifario_admin,1,1,1,1

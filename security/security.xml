@@ -1,27 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Categoría del módulo -->
-        <record id="module_category_tarifario" model="ir.module.category">
-            <field name="name">Tarifario Logístico</field>
-            <field name="sequence">50</field>
-        </record>
-
-        <!-- Grupo Usuario (solo lectura) -->
-        <record id="group_tarifario_user" model="res.groups">
-            <field name="name">Usuario</field>
-        </record>
-
-        <!-- Grupo Operador (lectura/escritura) -->
-        <record id="group_tarifario_operator" model="res.groups">
-            <field name="name">Operador</field>
-            <field name="implied_ids" eval="[(4, ref('group_tarifario_user'))]"/>
-        </record>
-
-        <!-- Grupo Administrador (todo) -->
-        <record id="group_tarifario_manager" model="res.groups">
-            <field name="name">Administrador</field>
-            <field name="implied_ids" eval="[(4, ref('group_tarifario_operator'))]"/>
+        <record id="group_tarifario_admin" model="res.groups">
+            <field name="name">Administrador Tarifas</field>
         </record>
     </data>
 </odoo>

@@ -22,7 +22,6 @@
         <record id="group_tarifario_manager" model="res.groups">
             <field name="name">Administrador</field>
             <field name="implied_ids" eval="[(4, ref('group_tarifario_operator'))]"/>
-            <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
         </record>
     </data>
 </odoo>

@@ -35,7 +35,8 @@
         <field name="name">freight.tariff.list</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <list decoration-success="state == 'active'" decoration-danger="state == 'expired'">
+            <!-- Se agregó editable="bottom" para editar directo en la lista y multi_edit="1" -->
+            <list decoration-success="state == 'active'" decoration-danger="state == 'expired'" editable="bottom" multi_edit="1">
                 <field name="country_id"/>
                 <field name="anio"/>
                 <field name="mes"/>
@@ -48,7 +49,8 @@
                 <field name="ocean_freight" optional="show"/>
                 <field name="ams_imo" optional="show"/>
                 <field name="lib_seguro" optional="show"/>
-                <field name="all_in" sum="Total"/>
+                <!-- all_in es calculado, se actualizará al cambiar los valores anteriores -->
+                <field name="all_in" sum="Total" force_save="1" readonly="1"/>
                 <field name="transit_time"/>
                 <field name="demoras"/>
                 <field name="state" widget="badge" decoration-success="state == 'active'" decoration-danger="state == 'expired'"/>

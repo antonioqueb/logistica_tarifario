@@ -177,10 +177,16 @@ class FreightTariff(models.Model):
             ]
             rec.name = ' | '.join(filter(None, parts))
 
-    @api.depends('ocean_freight', 'ams_imo')
+    # MODIFICADO: Ahora suma TODOS los componentes
+    @api.depends('costo_exw', 'ocean_freight', 'ams_imo', 'lib_seguro')
     def _compute_all_in(self):
         for rec in self:
-            rec.all_in = (rec.ocean_freight or 0.0) + (rec.ams_imo or 0.0)
+            rec.all_in = (
+                (rec.costo_exw or 0.0) + 
+                (rec.ocean_freight or 0.0) + 
+                (rec.ams_imo or 0.0) + 
+                (rec.lib_seguro or 0.0)
+            )
 
     @api.depends('anio', 'mes')
     def _compute_state(self):

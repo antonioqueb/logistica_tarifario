@@ -8,7 +8,7 @@
                 <field name="name"/>
                 <field name="country_id"/>
                 <field name="anio"/>
-                <field name="mes"/>
+                <field name="mes_ids"/>
                 <field name="forwarder_id"/>
                 <field name="naviera_id"/>
                 <field name="pol_id"/>
@@ -21,7 +21,6 @@
                 <separator/>
                 <filter name="group_country" string="País" context="{'group_by': 'country_id'}"/>
                 <filter name="group_anio" string="Año" context="{'group_by': 'anio'}"/>
-                <filter name="group_mes" string="Mes" context="{'group_by': 'mes'}"/>
                 <filter name="group_forwarder" string="Forwarder" context="{'group_by': 'forwarder_id'}"/>
                 <filter name="group_naviera" string="Naviera" context="{'group_by': 'naviera_id'}"/>
                 <filter name="group_pol" string="Puerto Carga (POL)" context="{'group_by': 'pol_id'}"/>
@@ -35,24 +34,36 @@
         <field name="name">freight.tariff.list</field>
         <field name="model">freight.tariff</field>
         <field name="arch" type="xml">
-            <!-- Se agregó editable="bottom" para editar directo en la lista y multi_edit="1" -->
+            <!-- Lista editable y multiedit -->
             <list decoration-success="state == 'active'" decoration-danger="state == 'expired'" editable="bottom" multi_edit="1">
-                <field name="country_id"/>
-                <field name="anio"/>
-                <field name="mes"/>
+                <field name="country_id" optional="hide"/>
                 <field name="forwarder_id"/>
-                <field name="naviera_id"/>
+                <field name="naviera_id" optional="show"/>
                 <field name="pol_id"/>
                 <field name="pod_id"/>
-                <field name="equipo"/>
-                <field name="costo_exw" optional="show"/>
-                <field name="ocean_freight" optional="show"/>
-                <field name="ams_imo" optional="show"/>
-                <field name="lib_seguro" optional="show"/>
-                <!-- all_in es calculado, se actualizará al cambiar los valores anteriores -->
-                <field name="all_in" sum="Total" force_save="1" readonly="1"/>
-                <field name="transit_time"/>
-                <field name="demoras"/>
+                
+                <field name="anio" optional="show"/>
+                <field name="mes_ids" widget="many2many_tags" optional="show"/>
+                
+                <field name="equipo" optional="show"/>
+                
+                <!-- Costos Originales -->
+                <field name="costo_exw" optional="show" sum="EXW"/>
+                <field name="ocean_freight" optional="show" sum="Ocean"/>
+                <field name="ams_imo" optional="hide"/>
+                <field name="lib_seguro" optional="hide"/>
+                
+                <!-- Nuevos Costos (Opcionales por espacio) -->
+                <field name="maniobras" optional="hide"/>
+                <field name="vacio_lavado" optional="hide"/>
+                <field name="aa" optional="hide"/>
+                <field name="flete_terrestre" optional="hide"/>
+                
+                <!-- All In Sumado -->
+                <field name="all_in" sum="Total All In" decoration-bf="1" force_save="1" readonly="1"/>
+                
+                <field name="transit_time" optional="show"/>
+                <field name="demoras" optional="hide"/>
                 <field name="state" widget="badge" decoration-success="state == 'active'" decoration-danger="state == 'expired'"/>
             </list>
         </field>
@@ -78,25 +89,36 @@
                             <field name="pol_id" options="{'no_quick_create': True}"/>
                             <field name="pod_id" options="{'no_quick_create': True}"/>
                         </group>
-                        <group string="Periodo y Equipo">
+                        <group string="Vigencia y Equipo">
                             <field name="anio"/>
-                            <field name="mes"/>
+                            <field name="mes_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                             <field name="equipo"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
                     <group>
-                        <group string="Costos">
+                        <group string="Costos Base">
                             <field name="costo_exw"/>
                             <field name="ocean_freight"/>
+                        </group>
+                        <group string="Adicionales">
                             <field name="ams_imo"/>
                             <field name="lib_seguro"/>
-                            <field name="all_in" class="oe_subtotal_footer_separator"/>
                         </group>
-                        <group string="Tiempos">
+                        <group string="Gastos Locales / Destino">
+                            <field name="maniobras"/>
+                            <field name="vacio_lavado"/>
+                            <field name="aa"/>
+                            <field name="flete_terrestre"/>
+                        </group>
+                        <group string="Totales y Tiempos">
+                            <field name="all_in" class="oe_subtotal_footer_separator" style="font-size: 1.5em;"/>
                             <field name="transit_time"/>
                             <field name="demoras"/>
                         </group>
+                    </group>
+                    <group>
+                         <field name="notes" placeholder="Notas adicionales o condiciones especiales..."/>
                     </group>
                 </sheet>
                 <chatter/>

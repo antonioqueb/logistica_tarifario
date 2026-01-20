@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="month_01" model="freight.tariff.month"><field name="name">Enero</field><field name="code">01</field><field name="sequence">1</field></record>
+        <record id="month_02" model="freight.tariff.month"><field name="name">Febrero</field><field name="code">02</field><field name="sequence">2</field></record>
+        <record id="month_03" model="freight.tariff.month"><field name="name">Marzo</field><field name="code">03</field><field name="sequence">3</field></record>
+        <record id="month_04" model="freight.tariff.month"><field name="name">Abril</field><field name="code">04</field><field name="sequence">4</field></record>
+        <record id="month_05" model="freight.tariff.month"><field name="name">Mayo</field><field name="code">05</field><field name="sequence">5</field></record>
+        <record id="month_06" model="freight.tariff.month"><field name="name">Junio</field><field name="code">06</field><field name="sequence">6</field></record>
+        <record id="month_07" model="freight.tariff.month"><field name="name">Julio</field><field name="code">07</field><field name="sequence">7</field></record>
+        <record id="month_08" model="freight.tariff.month"><field name="name">Agosto</field><field name="code">08</field><field name="sequence">8</field></record>
+        <record id="month_09" model="freight.tariff.month"><field name="name">Septiembre</field><field name="code">09</field><field name="sequence">9</field></record>
+        <record id="month_10" model="freight.tariff.month"><field name="name">Octubre</field><field name="code">10</field><field name="sequence">10</field></record>
+        <record id="month_11" model="freight.tariff.month"><field name="name">Noviembre</field><field name="code">11</field><field name="sequence">11</field></record>
+        <record id="month_12" model="freight.tariff.month"><field name="name">Diciembre</field><field name="code">12</field><field name="sequence">12</field></record>
+    </data>
+</odoo>

@@ -3,6 +3,17 @@ from datetime import date, timedelta
 from collections import defaultdict
 
 
+class FreightTariffMonth(models.Model):
+    """Modelo auxiliar para seleccionar múltiples meses"""
+    _name = 'freight.tariff.month'
+    _description = 'Meses del Tarifario'
+    _order = 'sequence, id'
+
+    name = fields.Char(string='Mes', required=True)
+    code = fields.Char(string='Código', required=True)
+    sequence = fields.Integer(string='Secuencia', default=10)
+
+
 class FreightTariff(models.Model):
     _name = 'freight.tariff'
     _description = 'Tarifario de Fletes'
@@ -12,10 +23,11 @@ class FreightTariff(models.Model):
     name = fields.Char(string='Referencia', compute='_compute_name', store=True)
     active = fields.Boolean(default=True)
 
-    # País
+    # ==========================
+    # UBICACIÓN Y ENTIDADES
+    # ==========================
     country_id = fields.Many2one('res.country', string='País', required=True)
 
-    # Forwarder (solo con etiqueta Forwarder)
     forwarder_id = fields.Many2one(
         'res.partner',
         string='Forwarder',
@@ -23,14 +35,12 @@ class FreightTariff(models.Model):
         domain="[('category_id.name', '=', 'Forwarder')]"
     )
 
-    # Naviera (solo con etiqueta Naviera)
     naviera_id = fields.Many2one(
         'res.partner',
         string='Naviera',
         domain="[('category_id.name', '=', 'Naviera')]"
     )
 
-    # Ubicaciones (con etiquetas POL y POD)
     pol_id = fields.Many2one(
         'res.partner',
         string='Puerto Carga (POL)',
@@ -44,35 +54,62 @@ class FreightTariff(models.Model):
         domain="[('category_id.name', '=', 'POD')]"
     )
 
-    # Periodo
+    # ==========================
+    # VIGENCIA (NUEVA LÓGICA)
+    # ==========================
     anio = fields.Char(
         string='Año',
         required=True,
         default=lambda self: str(date.today().year)
     )
+    
+    # Selección múltiple de meses
+    mes_ids = fields.Many2many(
+        'freight.tariff.month',
+        string='Meses de Vigencia',
+        required=True
+    )
+
+    # Campo técnico calculado para mantener compatibilidad con Dashboard SQL
+    # Guarda el código del primer mes seleccionado (ej: '01')
     mes = fields.Selection([
         ('01', 'Enero'), ('02', 'Febrero'), ('03', 'Marzo'), ('04', 'Abril'),
         ('05', 'Mayo'), ('06', 'Junio'), ('07', 'Julio'), ('08', 'Agosto'),
         ('09', 'Septiembre'), ('10', 'Octubre'), ('11', 'Noviembre'), ('12', 'Diciembre')
-    ], string='Mes', required=True, default=lambda self: str(date.today().month).zfill(2))
+    ], string='Mes Principal', compute='_compute_mes_legacy', store=True)
 
-    # Costos
+    # ==========================
+    # COSTOS (ACTUALIZADO)
+    # ==========================
     currency_id = fields.Many2one(
         'res.currency',
         string='Moneda',
         default=lambda self: self.env.ref('base.USD')
     )
+    
+    # Grupo 1: Origen / Flete
     costo_exw = fields.Monetary(string='Costo EXW')
     ocean_freight = fields.Monetary(string='Ocean Freight')
+    
+    # Grupo 2: Recargos
     ams_imo = fields.Monetary(string='AMS + IMO')
     lib_seguro = fields.Monetary(string='Lib + Seguro')
+    
+    # Grupo 3: Nuevos Campos Solicitados
+    maniobras = fields.Monetary(string='Maniobras')
+    vacio_lavado = fields.Monetary(string='Vacío + Lavado')
+    aa = fields.Monetary(string='AA (Agencia/Otros)')
+    flete_terrestre = fields.Monetary(string='Flete Terrestre')
+
+    # Sumatoria Total
     all_in = fields.Monetary(string='Total ALL IN', compute='_compute_all_in', store=True)
 
-    # Tiempos
+    # ==========================
+    # DATOS OPERATIVOS
+    # ==========================
     transit_time = fields.Integer(string='Transit Time (días)', help='Tiempo estimado de tránsito en días')
     demoras = fields.Integer(string='Demoras (días)', help='Free time / días libres de demurrage')
 
-    # Equipo
     equipo = fields.Selection([
         # Dry / Standard (GP)
         ('20st',  "20' ST (Dry/GP)"),
@@ -81,45 +118,42 @@ class FreightTariff(models.Model):
         ('45hc',  "45' HC (High Cube Dry)"),
         ('53st',  "53' ST (North America)"),
         ('53hc',  "53' HC (North America)"),
-
         # Reefer
         ('20rf',  "20' RF (Reefer)"),
         ('40rf',  "40' RF (Reefer)"),
         ('40rh',  "40' RH / 40' HC RF (High Cube Reefer)"),
         ('nor',   "NOR (Non-Operating Reefer)"),
-
         # Open Top
         ('20ot',  "20' OT (Open Top)"),
         ('40ot',  "40' OT (Open Top)"),
-
         # Flat Rack / Platform
         ('20fr',  "20' FR (Flat Rack)"),
         ('40fr',  "40' FR (Flat Rack)"),
         ('20pl',  "20' PL (Platform)"),
         ('40pl',  "40' PL (Platform)"),
-
-        # Tank
+        # Others
         ('20tk',  "20' TK (Tank)"),
-
-        # Special
         ('20ht',  "20' HT (Hard Top)"),
         ('40ht',  "40' HT (Hard Top)"),
         ('20vh',  "20' VH (Ventilated)"),
         ('40pw',  "40' PW (Pallet Wide)"),
         ('45pwhc',"45' PW HC (Pallet Wide High Cube)"),
-
         # Services
         ('lcl',   "LCL (Less than Container Load)"),
         ('bbk',   "BBK (Breakbulk / Suelta)"),
         ('roro',  "RoRo (Roll-on/Roll-off)"),
     ], string='Equipo', required=True, default='20st')
 
+    notes = fields.Text(string="Comentarios / Notas")
+
     state = fields.Selection([
         ('active', 'Vigente'),
         ('expired', 'Expirada')
     ], string='Estado', default='active', compute='_compute_state', store=True)
 
-    # Campos computados adicionales para análisis
+    # ==========================
+    # CAMPOS COMPUTADOS KPI
+    # ==========================
     ruta_completa = fields.Char(
         string='Ruta', 
         compute='_compute_ruta_completa', 
@@ -128,9 +162,9 @@ class FreightTariff(models.Model):
     )
     costo_total_logistico = fields.Monetary(
         string='Costo Total Logístico',
-        compute='_compute_costo_total',
+        related='all_in',
         store=True,
-        help='EXW + Ocean Freight + AMS/IMO + Lib/Seguro'
+        help='Es igual al All In en esta configuración'
     )
     margen_estimado = fields.Float(
         string='% Extras sobre Ocean',
@@ -139,6 +173,21 @@ class FreightTariff(models.Model):
         help='Porcentaje de costos adicionales sobre Ocean Freight'
     )
 
+    # ==========================
+    # MÉTODOS COMPUTE
+    # ==========================
+
+    @api.depends('mes_ids')
+    def _compute_mes_legacy(self):
+        """Calcula el mes principal para compatibilidad con búsquedas SQL del dashboard"""
+        for rec in self:
+            if rec.mes_ids:
+                # Ordenar por código (01, 02...) y tomar el primero
+                sorted_months = rec.mes_ids.sorted(key=lambda m: m.code)
+                rec.mes = sorted_months[0].code
+            else:
+                rec.mes = False
+
     @api.depends('pol_id', 'pod_id')
     def _compute_ruta_completa(self):
         for rec in self:
@@ -146,21 +195,29 @@ class FreightTariff(models.Model):
             pod = rec.pod_id.name or '?'
             rec.ruta_completa = f"{pol} → {pod}"
 
-    @api.depends('costo_exw', 'ocean_freight', 'ams_imo', 'lib_seguro')
-    def _compute_costo_total(self):
+    @api.depends(
+        'costo_exw', 'ocean_freight', 'ams_imo', 'lib_seguro',
+        'maniobras', 'vacio_lavado', 'aa', 'flete_terrestre'
+    )
+    def _compute_all_in(self):
         for rec in self:
-            rec.costo_total_logistico = (
+            rec.all_in = (
                 (rec.costo_exw or 0.0) +
                 (rec.ocean_freight or 0.0) +
                 (rec.ams_imo or 0.0) +
-                (rec.lib_seguro or 0.0)
+                (rec.lib_seguro or 0.0) +
+                (rec.maniobras or 0.0) +
+                (rec.vacio_lavado or 0.0) +
+                (rec.aa or 0.0) +
+                (rec.flete_terrestre or 0.0)
             )
 
-    @api.depends('ocean_freight', 'ams_imo', 'lib_seguro')
+    @api.depends('ocean_freight', 'all_in')
     def _compute_margen(self):
         for rec in self:
             if rec.ocean_freight:
-                extras = (rec.ams_imo or 0.0) + (rec.lib_seguro or 0.0)
+                # Extras son todo lo que no es Ocean
+                extras = rec.all_in - rec.ocean_freight
                 rec.margen_estimado = (extras / rec.ocean_freight) * 100
             else:
                 rec.margen_estimado = 0.0
@@ -177,38 +234,41 @@ class FreightTariff(models.Model):
             ]
             rec.name = ' | '.join(filter(None, parts))
 
-    # MODIFICADO: Ahora suma TODOS los componentes
-    @api.depends('costo_exw', 'ocean_freight', 'ams_imo', 'lib_seguro')
-    def _compute_all_in(self):
-        for rec in self:
-            rec.all_in = (
-                (rec.costo_exw or 0.0) + 
-                (rec.ocean_freight or 0.0) + 
-                (rec.ams_imo or 0.0) + 
-                (rec.lib_seguro or 0.0)
-            )
-
-    @api.depends('anio', 'mes')
+    @api.depends('anio', 'mes_ids')
     def _compute_state(self):
         today = date.today()
         current_year = today.year
-        current_month = today.month
+        current_month_code = str(today.month).zfill(2)
+        
         for rec in self:
-            if rec.anio and rec.mes:
-                try:
-                    tariff_year = int(rec.anio)
-                    tariff_month = int(rec.mes)
-                    if tariff_year < current_year or (tariff_year == current_year and tariff_month < current_month):
-                        rec.state = 'expired'
-                    else:
-                        rec.state = 'active'
-                except ValueError:
+            if not rec.anio or not rec.mes_ids:
+                rec.state = 'active'
+                continue
+            
+            try:
+                tariff_year = int(rec.anio)
+                if tariff_year < current_year:
+                    # Año pasado -> Expirado
+                    rec.state = 'expired'
+                elif tariff_year > current_year:
+                    # Año futuro -> Vigente
                     rec.state = 'active'
-            else:
+                else:
+                    # Año actual: Verificar si ALGUNO de los meses seleccionados
+                    # es igual o posterior al mes actual.
+                    codes = rec.mes_ids.mapped('code') # ej: ['01', '03']
+                    is_active = False
+                    for code in codes:
+                        if code >= current_month_code:
+                            is_active = True
+                            break
+                    
+                    rec.state = 'active' if is_active else 'expired'
+            except ValueError:
                 rec.state = 'active'
 
     # =====================================================
-    # MÉTODOS PARA DASHBOARD KPIs (CORREGIDOS PARA ODOO 19)
+    # MÉTODOS PARA DASHBOARD KPIs
     # =====================================================
 
     @api.model
@@ -257,7 +317,7 @@ class FreightTariff(models.Model):
             'costo_exw': round(sum(t.costo_exw or 0 for t in tarifas) / count, 2),
             'transit_time': round(sum(t.transit_time or 0 for t in tarifas) / count, 1),
             'demoras': round(sum(t.demoras or 0 for t in tarifas) / count, 1),
-            'costo_total': round(sum(t.costo_total_logistico for t in tarifas) / count, 2),
+            'costo_total': round(sum(t.all_in for t in tarifas) / count, 2),
             'margen_pct': round(sum(t.margen_estimado for t in tarifas) / count, 2),
         }
 
@@ -360,6 +420,7 @@ class FreightTariff(models.Model):
     @api.model
     def _get_tendencia_mensual(self, meses=12):
         """Tendencia mensual corregida para Odoo 19 usando SQL directo"""
+        # IMPORTANTE: Usa el campo computado 'mes' para agrupar
         self.env.cr.execute("""
             SELECT 
                 anio, mes, 
@@ -420,6 +481,7 @@ class FreightTariff(models.Model):
         current_year = str(today.year)
         current_month = str(today.month).zfill(2)
         
+        # Alerta de expiración este mes (aproximación basada en año)
         expiran_este_mes = self.search_count([
             ('anio', '=', current_year), ('mes', '=', current_month), ('state', '=', 'active')
         ])
@@ -430,7 +492,6 @@ class FreightTariff(models.Model):
         if tarifas_viejas > 10:
             alertas.append({'tipo': 'info', 'mensaje': f'{tarifas_viejas} tarifas expiradas en el sistema', 'icono': 'fa-archive'})
         
-        # Corregido: Obtener forwarders activos de forma más directa
         forwarders_activos_ids = self.search([('state', '=', 'active')]).mapped('forwarder_id')
         count_f = len(set(forwarders_activos_ids.ids))
         if count_f < 3:

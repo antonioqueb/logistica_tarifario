@@ -9,6 +9,7 @@
         'security/security.xml',
         'security/ir.model.access.csv',
         'data/partner_category_data.xml',
+        'data/tarifario_month_data.xml',
         'views/tarifario_views.xml',
         'views/tarifario_menus.xml',
         'views/dashboard_kpi.xml',

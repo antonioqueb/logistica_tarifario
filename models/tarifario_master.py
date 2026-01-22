@@ -98,8 +98,12 @@ class FreightTariff(models.Model):
     # Grupo 3: Nuevos Campos Solicitados
     maniobras = fields.Monetary(string='Maniobras')
     vacio_lavado = fields.Monetary(string='Vacío + Lavado')
-    aa = fields.Monetary(string='AA (Agencia/Otros)')
+    aa = fields.Monetary(string='AA (Agencia Aduanal)')
     flete_terrestre = fields.Monetary(string='Flete Terrestre')
+
+    profepa = fields.Monetary(string='PROFEPA')
+    uva = fields.Monetary(string='UVA')
+    fee = fields.Monetary(string='FEE')
 
     # Sumatoria Total
     all_in = fields.Monetary(string='Total ALL IN', compute='_compute_all_in', store=True)
@@ -197,7 +201,7 @@ class FreightTariff(models.Model):
 
     @api.depends(
         'costo_exw', 'ocean_freight', 'ams_imo', 'lib_seguro',
-        'maniobras', 'vacio_lavado', 'aa', 'flete_terrestre'
+        'maniobras', 'vacio_lavado', 'aa', 'flete_terrestre', 'profepa', 'uva', 'fee'
     )
     def _compute_all_in(self):
         for rec in self:
@@ -209,7 +213,10 @@ class FreightTariff(models.Model):
                 (rec.maniobras or 0.0) +
                 (rec.vacio_lavado or 0.0) +
                 (rec.aa or 0.0) +
-                (rec.flete_terrestre or 0.0)
+                (rec.flete_terrestre or 0.0) +
+                (rec.profepa or 0.0) +
+                (rec.uva or 0.0) +
+                (rec.fee or 0.0)
             )
 
     @api.depends('ocean_freight', 'all_in')

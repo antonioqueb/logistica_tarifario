@@ -58,6 +58,10 @@
                 <field name="vacio_lavado" optional="hide"/>
                 <field name="aa" optional="hide"/>
                 <field name="flete_terrestre" optional="hide"/>
+
+                <field name="profepa" optional="hide"/>
+                <field name="uva" optional="hide"/>
+                <field name="fee" optional="hide"/>
                 
                 <!-- All In Sumado -->
                 <field name="all_in" sum="Total All In" decoration-bf="1" force_save="1" readonly="1"/>
@@ -104,12 +108,15 @@
                         <group string="Adicionales">
                             <field name="ams_imo"/>
                             <field name="lib_seguro"/>
+                            <field name="fee"/> 
                         </group>
                         <group string="Gastos Locales / Destino">
                             <field name="maniobras"/>
                             <field name="vacio_lavado"/>
                             <field name="aa"/>
                             <field name="flete_terrestre"/>
+                            <field name="profepa"/>
+                            <field name="uva"/>
                         </group>
                         <group string="Totales y Tiempos">
                             <field name="all_in" class="oe_subtotal_footer_separator" style="font-size: 1.5em;"/>

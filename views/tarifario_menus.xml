@@ -1,20 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_tarifario_root" 
-              name="Tarifario" 
+    <menuitem id="menu_tarifario_root"
+              name="Tarifario"
+              action="action_freight_tariff"
               web_icon="logistica_tarifario,static/description/icon.png"
               sequence="1"
               groups="group_tarifario_admin"/>
 
-    <menuitem id="menu_tarifario_operaciones" 
-              name="Operaciones" 
-              parent="menu_tarifario_root" 
-              sequence="10"
-              groups="group_tarifario_admin"/>
-
-    <menuitem id="menu_freight_tariff_main" 
-              name="Catálogo de Tarifas" 
-              parent="menu_tarifario_operaciones" 
+    <menuitem id="menu_freight_tariff_main"
+              name="Catálogo de Tarifas"
+              parent="menu_tarifario_root"
               action="action_freight_tariff"
-              sequence="20"
+              sequence="10"
               groups="group_tarifario_admin"/>
 </odoo>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Ruta logística del TARIFARIO en la vista PRINCIPAL de la OC:
+         datos de captura diaria, siempre a la vista (no en pestañas). -->
+    <record id="view_purchase_order_form_tarifario_route" model="ir.ui.view">
+        <field name="name">purchase.order.form.tarifario.route</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='partner_ref']" position="after">
+                <field name="som_allowed_country_ids" invisible="1"/>
+                <field name="som_allowed_pol_ids" invisible="1"/>
+                <field name="som_allowed_pod_ids" invisible="1"/>
+                <field name="som_route_country_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_country_ids)]"/>
+                <field name="som_route_pol_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_pol_ids)]"/>
+                <field name="som_route_pod_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_pod_ids)]"/>
+            </xpath>
+
+            <!-- Capacidad y arancel POR LÍNEA (vaivén con el producto) -->
+            <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="before">
+                <field name="som_container_capacity" optional="show"/>
+                <field name="som_arancel_pct" optional="show"/>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

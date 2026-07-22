@@ -191,6 +191,24 @@ class StockPicking(models.Model):
             )
         return res
 
+    def _som_resolve_purchase_order(self):
+        """OC de esta recepción cuando los moves no traen purchase_line_id.
+        Cadena defensiva: purchase_id nativo → OC de la carga (portal
+        multi-PO) → OC del viaje de la Torre de Control."""
+        self.ensure_one()
+        po = getattr(self, 'purchase_id', False)
+        if po:
+            return po
+        po = getattr(self, 'supplier_cargo_po_id', False)
+        if po:
+            return po
+        if 'stock.transit.voyage' in self.env:
+            voyage = self.env['stock.transit.voyage'].sudo().search(
+                [('reception_picking_id', '=', self.id)], limit=1)
+            if voyage and voyage.purchase_id:
+                return voyage.purchase_id
+        return self.env['purchase.order']
+
     def _som_update_products_from_last_purchase(self):
         """REGLA CLAVE: los datos logísticos/arancelarios y el costo del
         producto se actualizan SOLO al validar una recepción (aunque sea de
@@ -201,9 +219,20 @@ class StockPicking(models.Model):
         for picking in self:
             if picking.state != 'done':
                 continue
+            fallback_po = picking._som_resolve_purchase_order()
             for move in picking.move_ids:
+                if not move.product_id:
+                    continue
                 po_line = getattr(move, 'purchase_line_id', False)
-                if not po_line or not move.product_id:
+                if not po_line and fallback_po:
+                    # Recepciones SIN vínculo directo en el move (p. ej. las
+                    # generadas por la Torre de Control): se resuelve la línea
+                    # por producto dentro de la OC de la recepción.
+                    po_line = fallback_po.order_line.filtered(
+                        lambda l, m=move: not l.display_type
+                        and l.product_id == m.product_id
+                    )[:1]
+                if not po_line:
                     continue
                 order = po_line.order_id
                 tmpl = move.product_id.product_tmpl_id.sudo()

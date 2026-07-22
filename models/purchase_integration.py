@@ -34,6 +34,12 @@ class PurchaseOrder(models.Model):
         help='País de origen de la mercancía. Solo países con tarifa activa '
              'en el tarifario.',
     )
+    som_route_forwarder_id = fields.Many2one(
+        'res.partner',
+        string='Forwarder',
+        tracking=True,
+        help='Solo forwarders con tarifa activa para el país elegido.',
+    )
     som_route_pol_id = fields.Many2one(
         'res.partner',
         string='Puerto de Carga (POL)',
@@ -51,6 +57,10 @@ class PurchaseOrder(models.Model):
         'res.country', compute='_compute_som_route_domains',
         string='Países con tarifa',
     )
+    som_allowed_forwarder_ids = fields.Many2many(
+        'res.partner', compute='_compute_som_route_domains',
+        string='Forwarders con tarifa',
+    )
     som_allowed_pol_ids = fields.Many2many(
         'res.partner', compute='_compute_som_route_domains',
         string='POLs con tarifa',
@@ -60,10 +70,11 @@ class PurchaseOrder(models.Model):
         string='PODs con tarifa',
     )
 
-    @api.depends('som_route_country_id', 'som_route_pol_id')
+    @api.depends('som_route_country_id', 'som_route_forwarder_id', 'som_route_pol_id')
     def _compute_som_route_domains(self):
-        """El tarifario es la ÚNICA fuente: los selectores solo ofrecen
-        combinaciones con tarifa activa, en cascada país → POL → POD."""
+        """El tarifario es la ÚNICA fuente: cascada país → forwarder →
+        POL → POD. Si el forwarder solo tiene un puerto tarifado, esa es la
+        única opción."""
         Tariff = self.env['freight.tariff'].sudo()
         tariffs = Tariff.search([('state', '=', 'active')])
         for order in self:
@@ -72,10 +83,15 @@ class PurchaseOrder(models.Model):
                 tariffs.filtered(lambda t: t.country_id == order.som_route_country_id)
                 if order.som_route_country_id else tariffs
             )
-            order.som_allowed_pol_ids = [(6, 0, by_country.mapped('pol_id').ids)]
+            order.som_allowed_forwarder_ids = [(6, 0, by_country.mapped('forwarder_id').ids)]
+            by_fwd = (
+                by_country.filtered(lambda t: t.forwarder_id == order.som_route_forwarder_id)
+                if order.som_route_forwarder_id else by_country
+            )
+            order.som_allowed_pol_ids = [(6, 0, by_fwd.mapped('pol_id').ids)]
             by_pol = (
-                by_country.filtered(lambda t: t.pol_id == order.som_route_pol_id)
-                if order.som_route_pol_id else by_country
+                by_fwd.filtered(lambda t: t.pol_id == order.som_route_pol_id)
+                if order.som_route_pol_id else by_fwd
             )
             order.som_allowed_pod_ids = [(6, 0, by_pol.mapped('pod_id').ids)]
 
@@ -92,6 +108,16 @@ class PurchaseOrder(models.Model):
 
     @api.onchange('som_route_country_id')
     def _onchange_som_route_country(self):
+        for order in self:
+            if order.som_route_forwarder_id and order.som_route_forwarder_id not in order.som_allowed_forwarder_ids:
+                order.som_route_forwarder_id = False
+            if order.som_route_pol_id and order.som_route_pol_id not in order.som_allowed_pol_ids:
+                order.som_route_pol_id = False
+            if order.som_route_pod_id and order.som_route_pod_id not in order.som_allowed_pod_ids:
+                order.som_route_pod_id = False
+
+    @api.onchange('som_route_forwarder_id')
+    def _onchange_som_route_forwarder(self):
         for order in self:
             if order.som_route_pol_id and order.som_route_pol_id not in order.som_allowed_pol_ids:
                 order.som_route_pol_id = False

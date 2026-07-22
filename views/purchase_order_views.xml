@@ -11,11 +11,15 @@
 
             <xpath expr="//field[@name='partner_ref']" position="after">
                 <field name="som_allowed_country_ids" invisible="1"/>
+                <field name="som_allowed_forwarder_ids" invisible="1"/>
                 <field name="som_allowed_pol_ids" invisible="1"/>
                 <field name="som_allowed_pod_ids" invisible="1"/>
                 <field name="som_route_country_id"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_country_ids)]"/>
+                <field name="som_route_forwarder_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_forwarder_ids)]"/>
                 <field name="som_route_pol_id"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_pol_ids)]"/>

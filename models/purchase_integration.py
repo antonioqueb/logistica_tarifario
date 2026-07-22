@@ -79,6 +79,17 @@ class PurchaseOrder(models.Model):
             )
             order.som_allowed_pod_ids = [(6, 0, by_pol.mapped('pod_id').ids)]
 
+    @api.onchange('partner_id')
+    def _onchange_partner_som_route_country(self):
+        """El país de origen toma por DEFECTO el país del proveedor (si ese
+        país tiene tarifa activa), siempre editable. No pisa una ruta ya
+        elegida a mano."""
+        for order in self:
+            if order.som_route_country_id or not order.partner_id.country_id:
+                continue
+            if order.partner_id.country_id in order.som_allowed_country_ids:
+                order.som_route_country_id = order.partner_id.country_id
+
     @api.onchange('som_route_country_id')
     def _onchange_som_route_country(self):
         for order in self:

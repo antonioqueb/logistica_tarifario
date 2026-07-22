@@ -95,6 +95,74 @@ class PurchaseOrder(models.Model):
             )
             order.som_allowed_pod_ids = [(6, 0, by_pol.mapped('pod_id').ids)]
 
+    def _som_apply_costing_update(self, products=None, naviera=False,
+                                   forwarder=False, pol=False, pod=False):
+        """NÚCLEO del costeo automático: escribe en los productos de esta OC
+        los datos de la última compra (ruta, capacidad, arancel y naviera/
+        forwarder con la regla 'la más costosa gana') y recalcula el ALL-IN.
+
+        Disparadores:
+        - PUBLICACIÓN del inventario en tránsito (torre de control): el
+          momento en que el material queda disponible para venderse.
+        - Validación de recepción SOLO en flujos sin torre de control
+          (compras nacionales / recepciones directas).
+        """
+        Picking = self.env['stock.picking']
+        templates = self.env['product.template'].sudo()
+        for order in self:
+            route_pol = pol or order.som_route_pol_id
+            route_pod = pod or order.som_route_pod_id
+            for line in order.order_line:
+                if line.display_type or not line.product_id:
+                    continue
+                if products and line.product_id.product_tmpl_id.id not in products.ids:
+                    continue
+                tmpl = line.product_id.product_tmpl_id.sudo()
+                tf = tmpl._fields
+                vals = {}
+                if order.som_route_country_id and 'x_origin_country_id' in tf                         and tmpl.x_origin_country_id != order.som_route_country_id:
+                    vals['x_origin_country_id'] = order.som_route_country_id.id
+                if route_pol and 'x_pol_id' in tf and tmpl.x_pol_id != route_pol:
+                    vals['x_pol_id'] = route_pol.id
+                if route_pod and 'x_pod_id' in tf and tmpl.x_pod_id != route_pod:
+                    vals['x_pod_id'] = route_pod.id
+                if (line.som_container_capacity or 0.0) > 0 and 'x_container_capacity' in tf                         and tmpl.x_container_capacity != line.som_container_capacity:
+                    vals['x_container_capacity'] = line.som_container_capacity
+                if (line.som_arancel_pct or 0.0) > 0 and 'x_arancel_pct' in tf                         and tmpl.x_arancel_pct != line.som_arancel_pct:
+                    vals['x_arancel_pct'] = line.som_arancel_pct
+
+                if naviera and 'x_naviera_id' in tf:
+                    new_cost = Picking._som_tariff_all_in(
+                        order.som_route_country_id, route_pol, route_pod,
+                        naviera, forwarder)
+                    cur_cost = (
+                        Picking._som_tariff_all_in(
+                            order.som_route_country_id, route_pol, route_pod,
+                            tmpl.x_naviera_id, tmpl.x_forwarder_id)
+                        if tmpl.x_naviera_id else -1.0
+                    )
+                    if new_cost >= cur_cost:
+                        if tmpl.x_naviera_id != naviera:
+                            vals['x_naviera_id'] = naviera.id
+                        if forwarder and 'x_forwarder_id' in tf                                 and tmpl.x_forwarder_id != forwarder:
+                            vals['x_forwarder_id'] = forwarder.id
+
+                if vals:
+                    tmpl.write(vals)
+                    _logger.info(
+                        "[TARIFARIO_PO] Costeo %s: producto %s ← %s",
+                        order.name, tmpl.display_name, vals,
+                    )
+                templates |= tmpl
+
+        if templates and hasattr(templates, '_compute_costo_all_in'):
+            templates._compute_costo_all_in()
+            _logger.info(
+                "[TARIFARIO_PO] Costo ALL-IN recalculado para: %s",
+                templates.mapped('display_name'),
+            )
+        return templates
+
     @api.onchange('partner_id')
     def _onchange_partner_som_route_country(self):
         """El país de origen toma por DEFECTO el país del proveedor (si ese
@@ -304,15 +372,33 @@ class StockPicking(models.Model):
                 vals['x_forwarder_id'] = new_fwd.id
         return vals
 
+    def _som_picking_belongs_to_voyage(self):
+        """True si esta recepción pertenece a un viaje de la Torre de
+        Control: en ese caso el disparador del costeo es la PUBLICACIÓN del
+        inventario, no la validación física."""
+        self.ensure_one()
+        if 'stock.transit.voyage' not in self.env:
+            return False
+        return bool(self.env['stock.transit.voyage'].sudo().search_count(
+            [('reception_picking_id', '=', self.id)]))
+
     def _som_update_products_from_last_purchase(self):
-        """REGLA CLAVE: los datos logísticos/arancelarios y el costo del
-        producto se actualizan SOLO al validar una recepción (aunque sea de
-        tránsito). Siempre gana la última compra recibida; los valores vacíos
-        de la OC no borran lo que el producto ya tiene."""
+        """Disparador de RECEPCIÓN: aplica únicamente a flujos SIN torre de
+        control (compras nacionales / recepciones directas). Las recepciones
+        de viajes TC se saltan: su costeo se dispara al PUBLICAR el
+        inventario (acuerdo de negocio: el costo cambia cuando el material
+        queda disponible para los vendedores)."""
         templates_to_recompute = self.env['product.template'].sudo()
 
         for picking in self:
             if picking.state != 'done':
+                continue
+            if picking._som_picking_belongs_to_voyage():
+                _logger.info(
+                    "[TARIFARIO_PO] Recepción %s pertenece a un viaje TC: el "
+                    "costeo se disparará al PUBLICAR el inventario.",
+                    picking.name,
+                )
                 continue
             fallback_po = picking._som_resolve_purchase_order()
             for move in picking.move_ids:

@@ -179,6 +179,20 @@ class PurchaseOrderLine(models.Model):
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
+    # Naviera/forwarder del EMBARQUE (nacen en el portal; capturables aquí
+    # cuando no vinieron de ahí). Catálogo del tarifario vía etiquetas.
+    som_naviera_id = fields.Many2one(
+        'res.partner', string='Naviera',
+        domain="[('category_id.name', '=', 'Naviera')]",
+        help='Naviera real de este embarque. Se pre-llena desde el portal '
+             'del proveedor; captúrala aquí si no vino de ahí.',
+    )
+    som_forwarder_id = fields.Many2one(
+        'res.partner', string='Forwarder',
+        domain="[('category_id.name', '=', 'Forwarder')]",
+        help='Forwarder real de este embarque.',
+    )
+
     def _action_done(self):
         res = super()._action_done()
         try:
@@ -208,6 +222,61 @@ class StockPicking(models.Model):
             if voyage and voyage.purchase_id:
                 return voyage.purchase_id
         return self.env['purchase.order']
+
+    def _som_tariff_all_in(self, country, pol, pod, naviera=False, forwarder=False):
+        """All-in de la tarifa activa que MEJOR corresponde a la combinación
+        (más específica primero). 0.0 si no hay tarifa."""
+        Tariff = self.env['freight.tariff'].sudo()
+        domain = [('state', '=', 'active')]
+        if country:
+            domain.append(('country_id', '=', country.id))
+        if pol:
+            domain.append(('pol_id', '=', pol.id))
+        if pod:
+            domain.append(('pod_id', '=', pod.id))
+        candidates = Tariff.search(domain, order='create_date desc')
+        if naviera:
+            nav = candidates.filtered(lambda t: t.naviera_id == naviera)
+            if forwarder:
+                navf = nav.filtered(lambda t: t.forwarder_id == forwarder)
+                nav = navf or nav
+            candidates = nav or candidates
+        return candidates[:1].all_in or 0.0
+
+    def _som_apply_carrier_most_expensive(self, picking, order, tmpl):
+        """REGLA 'LA MÁS COSTOSA GANA': si esta recepción usó una naviera
+        cuya tarifa all-in supera (o el producto no tiene naviera) a la
+        registrada, la naviera/forwarder del producto se actualizan. Así,
+        con 3 contenedores por 3 navieras distintas, el costeo del producto
+        usa la más cara."""
+        tf = tmpl._fields
+        if 'x_naviera_id' not in tf:
+            return {}
+        shipment = getattr(picking, 'supplier_shipment_id', False)
+        new_nav = picking.som_naviera_id or (
+            getattr(shipment, 'naviera_id', False) if shipment else False)
+        new_fwd = picking.som_forwarder_id or (
+            getattr(shipment, 'forwarder_id', False) if shipment else False)
+        if not new_nav:
+            return {}
+
+        country = order.som_route_country_id or getattr(tmpl, 'x_origin_country_id', False)
+        pol = order.som_route_pol_id or getattr(tmpl, 'x_pol_id', False)
+        pod = order.som_route_pod_id or getattr(tmpl, 'x_pod_id', False)
+
+        new_cost = self._som_tariff_all_in(country, pol, pod, new_nav, new_fwd)
+        cur_cost = (
+            self._som_tariff_all_in(country, pol, pod, tmpl.x_naviera_id, tmpl.x_forwarder_id)
+            if tmpl.x_naviera_id else -1.0
+        )
+
+        vals = {}
+        if new_cost >= cur_cost:
+            if tmpl.x_naviera_id != new_nav:
+                vals['x_naviera_id'] = new_nav.id
+            if new_fwd and 'x_forwarder_id' in tf and tmpl.x_forwarder_id != new_fwd:
+                vals['x_forwarder_id'] = new_fwd.id
+        return vals
 
     def _som_update_products_from_last_purchase(self):
         """REGLA CLAVE: los datos logísticos/arancelarios y el costo del
@@ -254,6 +323,8 @@ class StockPicking(models.Model):
                 if (po_line.som_arancel_pct or 0.0) > 0 and 'x_arancel_pct' in tf:
                     if tmpl.x_arancel_pct != po_line.som_arancel_pct:
                         vals['x_arancel_pct'] = po_line.som_arancel_pct
+
+                vals.update(self._som_apply_carrier_most_expensive(picking, order, tmpl))
 
                 if vals:
                     tmpl.write(vals)

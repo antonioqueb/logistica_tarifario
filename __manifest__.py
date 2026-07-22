@@ -1,6 +1,6 @@
 {
     'name': 'Gestión Profesional de Tarifas Logísticas',
-    'version': '19.0.1.2.2',
+    'version': '19.0.1.3.0',
     'author': 'Alphaqueb Consulting',
     'category': 'Operations/Logistics',
     'summary': 'Control histórico de tarifas y catálogo editable de fletes marítimos',

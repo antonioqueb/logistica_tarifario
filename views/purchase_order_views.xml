@@ -33,4 +33,24 @@
         </field>
     </record>
 
+
+    <!-- Naviera/Forwarder del embarque, capturables en la RECEPCIÓN si no
+         vinieron del portal del proveedor -->
+    <record id="view_picking_form_som_carrier" model="ir.ui.view">
+        <field name="name">stock.picking.form.som.carrier</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="som_naviera_id"
+                       invisible="picking_type_code != 'incoming'"
+                       readonly="state == 'done'"
+                       options="{'no_create': True}"/>
+                <field name="som_forwarder_id"
+                       invisible="picking_type_code != 'incoming'"
+                       readonly="state == 'done'"
+                       options="{'no_create': True}"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>

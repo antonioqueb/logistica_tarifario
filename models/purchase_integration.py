@@ -171,6 +171,33 @@ class PurchaseOrder(models.Model):
             )
         return templates
 
+    def write(self, vals):
+        res = super().write(vals)
+        # VAIVÉN del Forwarder: capturado en la OC → se refleja en sus
+        # recepciones abiertas y en el embarque del portal. Guard anti-bucle.
+        if 'som_route_forwarder_id' in vals and not self.env.context.get('som_carrier_sync'):
+            for order in self.with_context(som_carrier_sync=True):
+                fwd = order.som_route_forwarder_id
+                if not fwd:
+                    continue
+                pickings = self.env['stock.picking'].sudo().search([
+                    '|',
+                    ('purchase_id', '=', order.id),
+                    ('supplier_cargo_po_id', '=', order.id),
+                    ('picking_type_code', '=', 'incoming'),
+                    ('state', 'not in', ('done', 'cancel')),
+                ])
+                if pickings:
+                    pickings.with_context(som_carrier_sync=True).write(
+                        {'som_forwarder_id': fwd.id})
+                headers = self.env['supplier.proforma.header'].sudo().search(
+                    [('purchase_id', '=', order.id)])
+                for shipment in headers.mapped('shipment_ids'):
+                    if 'forwarder_id' in shipment._fields and shipment.forwarder_id != fwd:
+                        shipment.with_context(som_carrier_sync=True).write(
+                            {'forwarder_id': fwd.id})
+        return res
+
     @api.onchange('partner_id')
     def _onchange_partner_som_route_country(self):
         """El país de origen toma por DEFECTO el país del proveedor (si ese
@@ -304,6 +331,32 @@ class StockPicking(models.Model):
         domain="[('category_id.name', '=', 'Forwarder')]",
         help='Forwarder real de este embarque.',
     )
+
+    def write(self, vals):
+        res = super().write(vals)
+        # VAIVÉN del Forwarder/Naviera: capturado en la RECEPCIÓN → se refleja
+        # en la OC (forwarder de la ruta) y en el embarque del portal.
+        if (
+            ('som_forwarder_id' in vals or 'som_naviera_id' in vals)
+            and not self.env.context.get('som_carrier_sync')
+        ):
+            for picking in self.with_context(som_carrier_sync=True):
+                po = picking._som_resolve_purchase_order()
+                if po and picking.som_forwarder_id and 'som_route_forwarder_id' in po._fields:
+                    if po.som_route_forwarder_id != picking.som_forwarder_id:
+                        po.sudo().with_context(som_carrier_sync=True).write(
+                            {'som_route_forwarder_id': picking.som_forwarder_id.id})
+                shipment = getattr(picking, 'supplier_shipment_id', False)
+                if shipment:
+                    ship_vals = {}
+                    if picking.som_forwarder_id and 'forwarder_id' in shipment._fields                             and shipment.forwarder_id != picking.som_forwarder_id:
+                        ship_vals['forwarder_id'] = picking.som_forwarder_id.id
+                    if picking.som_naviera_id and 'naviera_id' in shipment._fields                             and shipment.naviera_id != picking.som_naviera_id:
+                        ship_vals['naviera_id'] = picking.som_naviera_id.id
+                        ship_vals['shipping_line'] = picking.som_naviera_id.name
+                    if ship_vals:
+                        shipment.sudo().with_context(som_carrier_sync=True).write(ship_vals)
+        return res
 
     def _action_done(self):
         res = super()._action_done()

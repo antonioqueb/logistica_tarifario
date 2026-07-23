@@ -132,21 +132,14 @@ class PurchaseOrder(models.Model):
                 if (line.som_arancel_pct or 0.0) > 0 and 'x_arancel_pct' in tf                         and tmpl.x_arancel_pct != line.som_arancel_pct:
                     vals['x_arancel_pct'] = line.som_arancel_pct
 
-                if naviera and 'x_naviera_id' in tf:
-                    new_cost = Picking._som_tariff_all_in(
-                        order.som_route_country_id, route_pol, route_pod,
-                        naviera, forwarder)
-                    cur_cost = (
-                        Picking._som_tariff_all_in(
-                            order.som_route_country_id, route_pol, route_pod,
-                            tmpl.x_naviera_id, tmpl.x_forwarder_id)
-                        if tmpl.x_naviera_id else -1.0
-                    )
-                    if new_cost >= cur_cost:
-                        if tmpl.x_naviera_id != naviera:
-                            vals['x_naviera_id'] = naviera.id
-                        if forwarder and 'x_forwarder_id' in tf                                 and tmpl.x_forwarder_id != forwarder:
-                            vals['x_forwarder_id'] = forwarder.id
+                # ÚLTIMA OPERACIÓN MANDA (igual que la ruta): naviera y
+                # forwarder se escriben INDEPENDIENTES — nunca quedan vacíos
+                # si el dato existe. La protección del costo vive en el
+                # promedio ponderado máximo, no aquí.
+                if naviera and 'x_naviera_id' in tf and tmpl.x_naviera_id != naviera:
+                    vals['x_naviera_id'] = naviera.id
+                if forwarder and 'x_forwarder_id' in tf and tmpl.x_forwarder_id != forwarder:
+                    vals['x_forwarder_id'] = forwarder.id
 
                 if vals:
                     tmpl.with_context(skip_costing_recompute=True).write(vals)
@@ -409,38 +402,24 @@ class StockPicking(models.Model):
         return candidates[:1].all_in or 0.0
 
     def _som_apply_carrier_most_expensive(self, picking, order, tmpl):
-        """REGLA 'LA MÁS COSTOSA GANA': si esta recepción usó una naviera
-        cuya tarifa all-in supera (o el producto no tiene naviera) a la
-        registrada, la naviera/forwarder del producto se actualizan. Así,
-        con 3 contenedores por 3 navieras distintas, el costeo del producto
-        usa la más cara."""
+        """Naviera/forwarder de la ÚLTIMA operación recibida — independientes
+        (forwarder sin naviera también cuenta) y nunca dejan el producto
+        vacío si el dato existe en la recepción, el embarque del portal o la
+        propia OC (cascada de fuentes)."""
         tf = tmpl._fields
-        if 'x_naviera_id' not in tf:
-            return {}
         shipment = getattr(picking, 'supplier_shipment_id', False)
         new_nav = picking.som_naviera_id or (
             getattr(shipment, 'naviera_id', False) if shipment else False)
         new_fwd = picking.som_forwarder_id or (
-            getattr(shipment, 'forwarder_id', False) if shipment else False)
-        if not new_nav:
-            return {}
-
-        country = order.som_route_country_id or getattr(tmpl, 'x_origin_country_id', False)
-        pol = order.som_route_pol_id or getattr(tmpl, 'x_pol_id', False)
-        pod = order.som_route_pod_id or getattr(tmpl, 'x_pod_id', False)
-
-        new_cost = self._som_tariff_all_in(country, pol, pod, new_nav, new_fwd)
-        cur_cost = (
-            self._som_tariff_all_in(country, pol, pod, tmpl.x_naviera_id, tmpl.x_forwarder_id)
-            if tmpl.x_naviera_id else -1.0
-        )
+            getattr(shipment, 'forwarder_id', False) if shipment else False
+        ) or (order.som_route_forwarder_id
+              if 'som_route_forwarder_id' in order._fields else False)
 
         vals = {}
-        if new_cost >= cur_cost:
-            if tmpl.x_naviera_id != new_nav:
-                vals['x_naviera_id'] = new_nav.id
-            if new_fwd and 'x_forwarder_id' in tf and tmpl.x_forwarder_id != new_fwd:
-                vals['x_forwarder_id'] = new_fwd.id
+        if new_nav and 'x_naviera_id' in tf and tmpl.x_naviera_id != new_nav:
+            vals['x_naviera_id'] = new_nav.id
+        if new_fwd and 'x_forwarder_id' in tf and tmpl.x_forwarder_id != new_fwd:
+            vals['x_forwarder_id'] = new_fwd.id
         return vals
 
     def _som_update_products_from_last_purchase(self):

@@ -148,7 +148,7 @@ class PurchaseOrder(models.Model):
                             vals['x_forwarder_id'] = forwarder.id
 
                 if vals:
-                    tmpl.write(vals)
+                    tmpl.with_context(skip_costing_recompute=True).write(vals)
                     _logger.info(
                         "[TARIFARIO_PO] Costeo %s: producto %s ← %s",
                         order.name, tmpl.display_name, vals,
@@ -251,10 +251,12 @@ class PurchaseOrderLine(models.Model):
             ):
                 vals['x_arancel_pct'] = line.som_arancel_pct
             if vals:
-                tmpl.sudo().write(vals)
+                # SOLO datos: el costo NO se recalcula aquí (regla estricta:
+                # únicamente al publicar o al recibir en ubicación interna).
+                tmpl.sudo().with_context(skip_costing_recompute=True).write(vals)
                 _logger.info(
-                    "[TARIFARIO_PO] Línea %s propagó a producto %s (vacío): %s",
-                    line.id, tmpl.display_name, vals,
+                    "[TARIFARIO_PO] Línea %s propagó a producto %s (vacío, sin "
+                    "recálculo): %s", line.id, tmpl.display_name, vals,
                 )
 
     @api.model_create_multi
@@ -372,32 +374,25 @@ class StockPicking(models.Model):
                 vals['x_forwarder_id'] = new_fwd.id
         return vals
 
-    def _som_picking_belongs_to_voyage(self):
-        """True si esta recepción pertenece a un viaje de la Torre de
-        Control: en ese caso el disparador del costeo es la PUBLICACIÓN del
-        inventario, no la validación física."""
-        self.ensure_one()
-        if 'stock.transit.voyage' not in self.env:
-            return False
-        return bool(self.env['stock.transit.voyage'].sudo().search_count(
-            [('reception_picking_id', '=', self.id)]))
-
     def _som_update_products_from_last_purchase(self):
-        """Disparador de RECEPCIÓN: aplica únicamente a flujos SIN torre de
-        control (compras nacionales / recepciones directas). Las recepciones
-        de viajes TC se saltan: su costeo se dispara al PUBLICAR el
-        inventario (acuerdo de negocio: el costo cambia cuando el material
-        queda disponible para los vendedores)."""
+        """Disparador de RECEPCIÓN: cualquier recepción validada hacia una
+        ubicación INTERNA (existencias) — con o sin torre de control, se haya
+        publicado o no. Junto con la PUBLICACIÓN del inventario en tránsito,
+        son los ÚNICOS dos momentos que actualizan el costo (regla estricta:
+        ni la captura del portal ni la validación de tránsito lo hacen)."""
         templates_to_recompute = self.env['product.template'].sudo()
 
         for picking in self:
             if picking.state != 'done':
                 continue
-            if picking._som_picking_belongs_to_voyage():
+            # SOLO recepciones a ubicación INTERNA disparan costeo (recibir en
+            # existencias). Tránsito validado NO es recepción interna: su
+            # disparador es la publicación (o la recepción interna posterior).
+            if picking.location_dest_id.usage != 'internal':
                 _logger.info(
-                    "[TARIFARIO_PO] Recepción %s pertenece a un viaje TC: el "
-                    "costeo se disparará al PUBLICAR el inventario.",
-                    picking.name,
+                    "[TARIFARIO_PO] Picking %s validado hacia '%s' (no "
+                    "interna): el costeo espera publicación o recepción "
+                    "interna.", picking.name, picking.location_dest_id.usage,
                 )
                 continue
             fallback_po = picking._som_resolve_purchase_order()

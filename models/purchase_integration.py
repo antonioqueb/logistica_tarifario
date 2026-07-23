@@ -109,6 +109,7 @@ class PurchaseOrder(models.Model):
         """
         Picking = self.env['stock.picking']
         templates = self.env['product.template'].sudo()
+        lines_to_activate = self.env['purchase.order.line'].sudo()
         for order in self:
             route_pol = pol or order.som_route_pol_id
             route_pod = pod or order.som_route_pod_id
@@ -154,6 +155,13 @@ class PurchaseOrder(models.Model):
                         order.name, tmpl.display_name, vals,
                     )
                 templates |= tmpl
+                lines_to_activate |= line
+
+        # ACTIVACIÓN: estas compras ya cuentan para el promedio ponderado
+        # (el disparador — publicar o recibir — ya ocurrió).
+        pending = lines_to_activate.filtered(lambda l: not l.som_costing_activated)
+        if pending:
+            pending.write({'som_costing_activated': True})
 
         if templates and hasattr(templates, '_compute_costo_all_in'):
             templates._compute_costo_all_in()
@@ -212,6 +220,14 @@ class PurchaseOrderLine(models.Model):
         string='Arancel (%)',
         digits=(5, 2),
         help='Arancel aplicable a este material. Vaivén con el producto.',
+    )
+    som_costing_activated = fields.Boolean(
+        string='Activada para costeo',
+        default=False, copy=False, index=True,
+        help='True cuando esta compra ya cuenta para el costo del producto: '
+             'se activa al PUBLICAR el inventario en tránsito o al RECIBIR en '
+             'ubicación interna. Las compras confirmadas sin activar NO mueven '
+             'el promedio ponderado.',
     )
 
     @api.onchange('product_id')
@@ -410,6 +426,8 @@ class StockPicking(models.Model):
                     )[:1]
                 if not po_line:
                     continue
+                if not po_line.som_costing_activated:
+                    po_line.sudo().write({'som_costing_activated': True})
                 order = po_line.order_id
                 tmpl = move.product_id.product_tmpl_id.sudo()
                 tf = tmpl._fields

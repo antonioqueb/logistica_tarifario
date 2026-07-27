@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+        <record id="module_category_tarifario" model="ir.module.category">
+            <field name="name">Tarifario de Logística</field>
+            <field name="description">Administración del tarifario de fletes y logística.</field>
+            <field name="sequence">92</field>
+        </record>
+
+        <record id="privilege_tarifario" model="res.groups.privilege">
+            <field name="name">Tarifario</field>
+            <field name="category_id" ref="module_category_tarifario"/>
+            <field name="sequence">10</field>
+        </record>
+
         <record id="group_tarifario_admin" model="res.groups">
             <field name="name">Administrador Tarifas</field>
+            <field name="privilege_id" ref="privilege_tarifario"/>
         </record>
     </data>
 </odoo>

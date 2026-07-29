@@ -52,6 +52,26 @@ class PurchaseOrder(models.Model):
         tracking=True,
         help='Solo puertos destino con tarifa activa para país + POL.',
     )
+    som_route_naviera_id = fields.Many2one(
+        'res.partner',
+        string='Naviera / Aerolínea',
+        tracking=True,
+        help='Solo navieras con tarifa activa para el forwarder elegido. '
+             'Se sincroniza en vaivén con el embarque del portal.',
+    )
+    som_route_etd = fields.Date(
+        string='ETD',
+        tracking=True,
+        help='Estimated Time of Departure — fecha estimada de salida del '
+             'puerto origen. Se sincroniza en vaivén con el embarque.',
+    )
+    som_transport_type = fields.Selection([
+        ('maritime', 'Marítimo'),
+        ('air', 'Aéreo'),
+        ('land', 'Terrestre'),
+    ], string='Tipo de transporte', tracking=True,
+        help='Cómo viaja físicamente la mercancía. Se sincroniza en vaivén '
+             'con el embarque del portal.')
 
     som_allowed_country_ids = fields.Many2many(
         'res.country', compute='_compute_som_route_domains',
@@ -68,6 +88,10 @@ class PurchaseOrder(models.Model):
     som_allowed_pod_ids = fields.Many2many(
         'res.partner', compute='_compute_som_route_domains',
         string='PODs con tarifa',
+    )
+    som_allowed_naviera_ids = fields.Many2many(
+        'res.partner', compute='_compute_som_route_domains',
+        string='Navieras con tarifa',
     )
 
     @api.depends('som_route_country_id', 'som_route_forwarder_id', 'som_route_pol_id')
@@ -88,6 +112,7 @@ class PurchaseOrder(models.Model):
                 by_country.filtered(lambda t: t.forwarder_id == order.som_route_forwarder_id)
                 if order.som_route_forwarder_id else by_country
             )
+            order.som_allowed_naviera_ids = [(6, 0, by_fwd.mapped('naviera_id').ids)]
             order.som_allowed_pol_ids = [(6, 0, by_fwd.mapped('pol_id').ids)]
             by_pol = (
                 by_fwd.filtered(lambda t: t.pol_id == order.som_route_pol_id)
@@ -164,15 +189,54 @@ class PurchaseOrder(models.Model):
             )
         return templates
 
-    def write(self, vals):
-        res = super().write(vals)
-        # VAIVÉN del Forwarder: capturado en la OC → se refleja en sus
-        # recepciones abiertas y en el embarque del portal. Guard anti-bucle.
-        if 'som_route_forwarder_id' in vals and not self.env.context.get('som_carrier_sync'):
-            for order in self.with_context(som_carrier_sync=True):
-                fwd = order.som_route_forwarder_id
-                if not fwd:
-                    continue
+    # Campos de ruta de la OC que viajan en vaivén con el embarque del portal.
+    SOM_ROUTE_SYNC_FIELDS = (
+        'som_route_forwarder_id', 'som_route_naviera_id',
+        'som_route_pol_id', 'som_route_pod_id',
+        'som_route_etd', 'som_transport_type',
+    )
+
+    def _som_shipment_vals_from_route(self, shipment):
+        """Valores del embarque derivados de la ruta de ESTA OC (solo campos
+        con dato y distintos al valor actual del embarque)."""
+        self.ensure_one()
+        sf = shipment._fields
+        vals = {}
+        if self.som_route_forwarder_id and 'forwarder_id' in sf \
+                and shipment.forwarder_id != self.som_route_forwarder_id:
+            vals['forwarder_id'] = self.som_route_forwarder_id.id
+        if self.som_route_naviera_id and 'naviera_id' in sf \
+                and shipment.naviera_id != self.som_route_naviera_id:
+            vals['naviera_id'] = self.som_route_naviera_id.id
+            if 'shipping_line' in sf:
+                vals['shipping_line'] = self.som_route_naviera_id.name
+        if self.som_route_pol_id and 'pol_id' in sf \
+                and shipment.pol_id != self.som_route_pol_id:
+            vals['pol_id'] = self.som_route_pol_id.id
+            if 'port_origin' in sf:
+                vals['port_origin'] = self.som_route_pol_id.name
+        if self.som_route_pod_id and 'pod_id' in sf \
+                and shipment.pod_id != self.som_route_pod_id:
+            vals['pod_id'] = self.som_route_pod_id.id
+            if 'port_destination' in sf:
+                vals['port_destination'] = self.som_route_pod_id.name
+        if self.som_route_etd and 'etd' in sf and shipment.etd != self.som_route_etd:
+            vals['etd'] = self.som_route_etd
+        if self.som_transport_type and 'shipment_type' in sf \
+                and shipment.shipment_type != self.som_transport_type:
+            vals['shipment_type'] = self.som_transport_type
+        return vals
+
+    def _som_propagate_route_to_shipments(self):
+        """VAIVÉN OC → embarque: refleja la ruta del tarifario en los
+        embarques del portal y en las recepciones abiertas."""
+        for order in self.with_context(som_carrier_sync=True):
+            picking_vals = {}
+            if order.som_route_forwarder_id:
+                picking_vals['som_forwarder_id'] = order.som_route_forwarder_id.id
+            if order.som_route_naviera_id:
+                picking_vals['som_naviera_id'] = order.som_route_naviera_id.id
+            if picking_vals:
                 pickings = self.env['stock.picking'].sudo().search([
                     '|',
                     ('purchase_id', '=', order.id),
@@ -181,14 +245,25 @@ class PurchaseOrder(models.Model):
                     ('state', 'not in', ('done', 'cancel')),
                 ])
                 if pickings:
-                    pickings.with_context(som_carrier_sync=True).write(
-                        {'som_forwarder_id': fwd.id})
-                headers = self.env['supplier.proforma.header'].sudo().search(
-                    [('purchase_id', '=', order.id)])
-                for shipment in headers.mapped('shipment_ids'):
-                    if 'forwarder_id' in shipment._fields and shipment.forwarder_id != fwd:
-                        shipment.with_context(som_carrier_sync=True).write(
-                            {'forwarder_id': fwd.id})
+                    pickings.with_context(som_carrier_sync=True).write(picking_vals)
+
+            headers = self.env['supplier.proforma.header'].sudo().search(
+                [('purchase_id', '=', order.id)])
+            for shipment in headers.mapped('shipment_ids'):
+                ship_vals = order._som_shipment_vals_from_route(shipment)
+                if ship_vals:
+                    shipment.with_context(
+                        som_carrier_sync=True, skip_date_sync=True,
+                    ).write(ship_vals)
+
+    def write(self, vals):
+        res = super().write(vals)
+        # VAIVÉN de la ruta completa (forwarder, naviera, POL, POD, ETD y
+        # tipo de transporte): capturada en la OC → se refleja en sus
+        # recepciones abiertas y en los embarques del portal. Guard anti-bucle.
+        if not self.env.context.get('som_carrier_sync') \
+                and any(f in vals for f in self.SOM_ROUTE_SYNC_FIELDS):
+            self._som_propagate_route_to_shipments()
         return res
 
     @api.onchange('partner_id')
@@ -207,6 +282,8 @@ class PurchaseOrder(models.Model):
         for order in self:
             if order.som_route_forwarder_id and order.som_route_forwarder_id not in order.som_allowed_forwarder_ids:
                 order.som_route_forwarder_id = False
+            if order.som_route_naviera_id and order.som_route_naviera_id not in order.som_allowed_naviera_ids:
+                order.som_route_naviera_id = False
             if order.som_route_pol_id and order.som_route_pol_id not in order.som_allowed_pol_ids:
                 order.som_route_pol_id = False
             if order.som_route_pod_id and order.som_route_pod_id not in order.som_allowed_pod_ids:
@@ -215,6 +292,8 @@ class PurchaseOrder(models.Model):
     @api.onchange('som_route_forwarder_id')
     def _onchange_som_route_forwarder(self):
         for order in self:
+            if order.som_route_naviera_id and order.som_route_naviera_id not in order.som_allowed_naviera_ids:
+                order.som_route_naviera_id = False
             if order.som_route_pol_id and order.som_route_pol_id not in order.som_allowed_pol_ids:
                 order.som_route_pol_id = False
             if order.som_route_pod_id and order.som_route_pod_id not in order.som_allowed_pod_ids:

@@ -26,6 +26,12 @@
                 <field name="som_route_pod_id"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_pod_ids)]"/>
+                <field name="som_allowed_naviera_ids" invisible="1"/>
+                <field name="som_route_naviera_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_naviera_ids)]"/>
+                <field name="som_transport_type"/>
+                <field name="som_route_etd"/>
             </xpath>
 
             <!-- Capacidad y arancel POR LÍNEA (vaivén con el producto) -->

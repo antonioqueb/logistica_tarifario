@@ -37,10 +37,14 @@
             <!-- Lista editable y multiedit -->
             <list decoration-success="state == 'active'" decoration-danger="state == 'expired'" editable="bottom" multi_edit="1">
                 <field name="country_id" optional="hide"/>
-                <field name="forwarder_id"/>
-                <field name="naviera_id" optional="show"/>
-                <field name="pol_id"/>
-                <field name="pod_id"/>
+                <!-- default_category_id: el contacto creado DESDE el campo
+                     nace ya etiquetado (Forwarder/Naviera/POL/POD) y aparece
+                     de inmediato en los dropdowns filtrados — sin huérfanos
+                     ni duplicados. -->
+                <field name="forwarder_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_forwarder)d])]}"/>
+                <field name="naviera_id" optional="show" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_naviera)d])]}"/>
+                <field name="pol_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pol)d])]}"/>
+                <field name="pod_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pod)d])]}"/>
                 
                 <field name="anio" optional="show"/>
                 <field name="mes_ids" widget="many2many_tags" optional="show"/>
@@ -88,10 +92,12 @@
                     <group>
                         <group string="Origen y Destino">
                             <field name="country_id"/>
-                            <field name="forwarder_id" options="{'no_quick_create': True}"/>
-                            <field name="naviera_id" options="{'no_quick_create': True}"/>
-                            <field name="pol_id" options="{'no_quick_create': True}"/>
-                            <field name="pod_id" options="{'no_quick_create': True}"/>
+                            <!-- default_category_id: 'Crear y editar…' abre el
+                                 contacto YA etiquetado según el campo de origen. -->
+                            <field name="forwarder_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_forwarder)d])]}"/>
+                            <field name="naviera_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_naviera)d])]}"/>
+                            <field name="pol_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pol)d])]}"/>
+                            <field name="pod_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pod)d])]}"/>
                         </group>
                         <group string="Vigencia y Equipo">
                             <field name="anio"/>

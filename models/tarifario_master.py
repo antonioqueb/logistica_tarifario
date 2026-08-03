@@ -537,10 +537,7 @@ class FreightTariff(models.Model):
     # =====================================================
 
     def _get_or_create_tag(self, tag_name):
-        tag = self.env['res.partner.category'].search([('name', '=', tag_name)], limit=1)
-        if not tag:
-            tag = self.env['res.partner.category'].create({'name': tag_name})
-        return tag
+        return self.env['res.partner']._tarifario_get_tag(tag_name)
 
     def _assign_tag_to_partner(self, partner_id, tag):
         if partner_id:

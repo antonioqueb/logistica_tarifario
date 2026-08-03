@@ -41,10 +41,10 @@
                      nace ya etiquetado (Forwarder/Naviera/POL/POD) y aparece
                      de inmediato en los dropdowns filtrados — sin huérfanos
                      ni duplicados. -->
-                <field name="forwarder_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_forwarder)d])], 'tarifario_partner_tag': 'Forwarder'}"/>
-                <field name="naviera_id" optional="show" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_naviera)d])], 'tarifario_partner_tag': 'Naviera'}"/>
-                <field name="pol_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pol)d])], 'tarifario_partner_tag': 'POL'}"/>
-                <field name="pod_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pod)d])], 'tarifario_partner_tag': 'POD'}"/>
+                <field name="forwarder_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_forwarder)d])], 'tarifario_partner_tag': 'Forwarder', 'force_full_form_skip': True}"/>
+                <field name="naviera_id" optional="show" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_naviera)d])], 'tarifario_partner_tag': 'Naviera', 'force_full_form_skip': True}"/>
+                <field name="pol_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pol)d])], 'tarifario_partner_tag': 'POL', 'force_full_form_skip': True}"/>
+                <field name="pod_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pod)d])], 'tarifario_partner_tag': 'POD', 'force_full_form_skip': True}"/>
                 
                 <field name="anio" optional="show"/>
                 <field name="mes_ids" widget="many2many_tags" optional="show"/>
@@ -94,10 +94,10 @@
                             <field name="country_id"/>
                             <!-- default_category_id: 'Crear y editar…' abre el
                                  contacto YA etiquetado según el campo de origen. -->
-                            <field name="forwarder_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_forwarder)d])], 'tarifario_partner_tag': 'Forwarder'}"/>
-                            <field name="naviera_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_naviera)d])], 'tarifario_partner_tag': 'Naviera'}"/>
-                            <field name="pol_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pol)d])], 'tarifario_partner_tag': 'POL'}"/>
-                            <field name="pod_id" options="{'no_quick_create': True}" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pod)d])], 'tarifario_partner_tag': 'POD'}"/>
+                            <field name="forwarder_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_forwarder)d])], 'tarifario_partner_tag': 'Forwarder', 'force_full_form_skip': True}"/>
+                            <field name="naviera_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_naviera)d])], 'tarifario_partner_tag': 'Naviera', 'force_full_form_skip': True}"/>
+                            <field name="pol_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pol)d])], 'tarifario_partner_tag': 'POL', 'force_full_form_skip': True}"/>
+                            <field name="pod_id" context="{'default_category_id': [(6, 0, [%(logistica_tarifario.partner_category_pod)d])], 'tarifario_partner_tag': 'POD', 'force_full_form_skip': True}"/>
                         </group>
                         <group string="Vigencia y Equipo">
                             <field name="anio"/>

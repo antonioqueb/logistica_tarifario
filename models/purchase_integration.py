@@ -247,8 +247,26 @@ class PurchaseOrder(models.Model):
                 if pickings:
                     pickings.with_context(som_carrier_sync=True).write(picking_vals)
 
-            headers = self.env['supplier.proforma.header'].sudo().search(
-                [('purchase_id', '=', order.id)])
+            if 'supplier.proforma.header' not in self.env:
+                continue
+
+            Header = self.env['supplier.proforma.header'].sudo()
+            headers = Header.search([('purchase_id', '=', order.id)])
+
+            # La ruta capturada en la OC debe vivir en un EMBARQUE desde el
+            # primer momento: si la OC aún no tiene proforma/embarque, se
+            # crean por default aquí — no se espera a que el usuario o el
+            # portal los generen para que la información se propague.
+            has_route_data = any(order[f] for f in self.SOM_ROUTE_SYNC_FIELDS)
+            if has_route_data:
+                if not headers:
+                    headers = Header.create({'purchase_id': order.id})
+                if 'supplier.shipment' in self.env \
+                        and not headers.mapped('shipment_ids'):
+                    self.env['supplier.shipment'].sudo().with_context(
+                        som_carrier_sync=True, skip_date_sync=True,
+                    ).create({'proforma_id': headers[0].id})
+
             for shipment in headers.mapped('shipment_ids'):
                 ship_vals = order._som_shipment_vals_from_route(shipment)
                 if ship_vals:

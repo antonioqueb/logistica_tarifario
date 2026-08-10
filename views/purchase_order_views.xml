@@ -21,30 +21,49 @@
                 <field name="som_allowed_naviera_ids" invisible="1"/>
             </xpath>
 
-            <xpath expr="//field[@name='partner_id']/../.." position="after">
-                <group string="Ruta logística" name="som_tarifario_route" col="2">
-                    <group>
-                        <field name="som_route_country_id"
-                               options="{'no_create': True, 'no_open': True}"
-                               domain="[('id', 'in', som_allowed_country_ids)]"/>
-                        <field name="som_route_forwarder_id"
-                               options="{'no_create': True, 'no_open': True}"
-                               domain="[('id', 'in', som_allowed_forwarder_ids)]"/>
-                        <field name="som_transport_type"/>
-                        <field name="som_route_etd"/>
-                    </group>
-                    <group>
-                        <field name="som_route_pol_id"
-                               options="{'no_create': True, 'no_open': True}"
-                               domain="[('id', 'in', som_allowed_pol_ids)]"/>
-                        <field name="som_route_pod_id"
-                               options="{'no_create': True, 'no_open': True}"
-                               domain="[('id', 'in', som_allowed_pod_ids)]"/>
-                        <field name="som_route_naviera_id"
-                               options="{'no_create': True, 'no_open': True}"
-                               domain="[('id', 'in', som_allowed_naviera_ids)]"/>
-                    </group>
-                </group>
+            <!-- Ocultos por pedido (2026-08-13): Fecha de confirmación,
+                 Entrega esperada, Entregar a y Llegada. El espacio de la
+                 columna derecha lo ocupa la ruta logística del tarifario. -->
+            <xpath expr="//label[@for='date_approve']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//div[@name='date_approve']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//label[@for='date_planned']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//div[@name='date_planned_div']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//div[@name='reminder']/following-sibling::field[@name='picking_type_id']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//div[@name='reminder']/following-sibling::field[@name='effective_date']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Ruta logística en la COLUMNA DERECHA del encabezado (el
+                 espacio liberado): balancea contra Proveedor / Tipo de
+                 Compra / Referencia PI / Moneda de la izquierda. -->
+            <xpath expr="//div[@name='reminder']/.." position="inside">
+                <field name="som_route_country_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_country_ids)]"/>
+                <field name="som_route_forwarder_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_forwarder_ids)]"/>
+                <field name="som_route_pol_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_pol_ids)]"/>
+                <field name="som_route_pod_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_pod_ids)]"/>
+                <field name="som_route_naviera_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('id', 'in', som_allowed_naviera_ids)]"/>
+                <field name="som_transport_type"/>
+                <field name="som_route_etd"/>
             </xpath>
 
             <!-- Capacidad y arancel POR LÍNEA (vaivén con el producto) -->

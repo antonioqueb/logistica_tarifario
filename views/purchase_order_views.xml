@@ -36,17 +36,20 @@
             <xpath expr="//div[@name='date_planned_div']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
-            <xpath expr="//div[@name='reminder']/following-sibling::field[@name='picking_type_id']" position="attributes">
+            <!-- not(ancestor::field) = SOLO la instancia del encabezado, no
+                 las de los sub-árboles de order_line. El anclaje por hermanos
+                 del div reminder varía entre builds de Odoo 19. -->
+            <xpath expr="//field[@name='picking_type_id'][not(ancestor::field)]" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
-            <xpath expr="//div[@name='reminder']/following-sibling::field[@name='effective_date']" position="attributes">
+            <xpath expr="//field[@name='effective_date'][not(ancestor::field)]" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
 
             <!-- Ruta logística en la COLUMNA DERECHA del encabezado (el
                  espacio liberado): balancea contra Proveedor / Tipo de
                  Compra / Referencia PI / Moneda de la izquierda. -->
-            <xpath expr="//div[@name='reminder']/.." position="inside">
+            <xpath expr="//field[@name='date_order'][not(ancestor::field)]/.." position="inside">
                 <field name="som_route_country_id"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_country_ids)]"/>

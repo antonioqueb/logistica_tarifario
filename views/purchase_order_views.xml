@@ -7,6 +7,12 @@
         <field name="name">purchase.order.form.tarifario.route</field>
         <field name="model">purchase.order</field>
         <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <!-- Prioridad alta: picking_type_id y effective_date los inyecta la
+             vista heredada de purchase_stock, que en esta base se aplica
+             DESPUÉS que esta (ParseError real 2026-08-10: el nodo "no se
+             puede localizar" aunque se ve en pantalla). Con 200 esta vista
+             se aplica al final, cuando el encabezado ya está completo. -->
+        <field name="priority">200</field>
         <field name="arch" type="xml">
 
             <!-- Los helpers invisibles se quedan en la columna izquierda (no

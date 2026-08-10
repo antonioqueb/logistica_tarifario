@@ -81,6 +81,16 @@
                 <field name="som_arancel_pct" optional="show"/>
             </xpath>
 
+            <!-- PRECIO SIEMPRE CORREGIBLE: Odoo vuelve el precio unitario de
+                 solo lectura cuando la línea ya se recibió/facturó o la orden
+                 quedó bloqueada. Regla SOM: el precio de compra se puede
+                 corregir mientras la orden no esté cancelada (la valuación de
+                 lo ya recibido no se recalcula sola; la factura toma el nuevo
+                 precio). -->
+            <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="attributes">
+                <attribute name="readonly">state == 'cancel'</attribute>
+            </xpath>
+
         </field>
     </record>
 

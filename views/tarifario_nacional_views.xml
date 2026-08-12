@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_freight_tariff_national_list" model="ir.ui.view">
+        <field name="name">freight.tariff.national.list</field>
+        <field name="model">freight.tariff.national</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="country_id" optional="show"/>
+                <field name="origen"/>
+                <field name="destino"/>
+                <field name="costo" widget="monetary"/>
+                <field name="capacidad"/>
+                <field name="transit_time" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="active" widget="boolean_toggle" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_freight_tariff_national_form" model="ir.ui.view">
+        <field name="name">freight.tariff.national.form</field>
+        <field name="model">freight.tariff.national</field>
+        <field name="arch" type="xml">
+            <form string="Tarifa Nacional">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group string="Ruta">
+                            <field name="country_id"/>
+                            <field name="origen"/>
+                            <field name="destino"/>
+                            <field name="transit_time"/>
+                        </group>
+                        <group string="Costo">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="costo" widget="monetary"/>
+                            <field name="capacidad"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <group string="Notas"><field name="notas" nolabel="1"/></group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_freight_tariff_national_search" model="ir.ui.view">
+        <field name="name">freight.tariff.national.search</field>
+        <field name="model">freight.tariff.national</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="origen"/>
+                <field name="destino"/>
+                <filter name="filter_inactive" string="Archivadas" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_freight_tariff_national" model="ir.actions.act_window">
+        <field name="name">Tarifario Nacional</field>
+        <field name="res_model">freight.tariff.national</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_freight_tariff_national"
+              name="Nacional"
+              parent="menu_tarifario_root"
+              action="action_freight_tariff_national"
+              sequence="15"/>
+
+    <!-- Modo de flete + ruta nacional junto a la configuración logística -->
+    <record id="product_template_form_national_freight" model="ir.ui.view">
+        <field name="name">product.template.form.national.freight</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="inventory_shopping_cart.product_template_form_view_custom_prices"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='x_origin_country_id']" position="before">
+                <field name="x_freight_mode" widget="radio" options="{'horizontal': true}"/>
+                <field name="x_national_route_id"
+                       invisible="x_freight_mode != 'national'"
+                       required="x_freight_mode == 'national'"
+                       options="{'no_create': True}"/>
+            </xpath>
+            <xpath expr="//field[@name='x_origin_country_id']" position="attributes">
+                <attribute name="invisible">x_freight_mode == 'national'</attribute>
+            </xpath>
+            <xpath expr="//field[@name='x_pol_id']" position="attributes">
+                <attribute name="invisible">x_freight_mode == 'national'</attribute>
+            </xpath>
+            <xpath expr="//field[@name='x_pod_id']" position="attributes">
+                <attribute name="invisible">x_freight_mode == 'national'</attribute>
+            </xpath>
+            <xpath expr="//field[@name='x_arancel_pct']" position="attributes">
+                <attribute name="invisible">x_freight_mode == 'national'</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

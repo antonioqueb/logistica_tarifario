@@ -25,6 +25,18 @@ class FreightTariffNational(models.Model):
     origen = fields.Char(string='Origen', required=True, tracking=True)
     destino = fields.Char(string='Destino', required=True, tracking=True)
 
+    vehicle_type = fields.Selection([
+        ('camioneta_35', 'Camioneta 3.5 t'),
+        ('rabon', 'Rabón'),
+        ('torton', 'Tortón'),
+        ('trailer_caja', 'Tráiler (caja seca)'),
+        ('plataforma', 'Plataforma'),
+        ('full', 'Full (doble remolque)'),
+        ('otro', 'Otro'),
+    ], string='Tipo de vehículo', tracking=True,
+        help='Vehículo con el que viaja el flete de esta ruta. Se propaga a '
+             'la ruta de la orden de compra cuando la ruta es NACIONAL.')
+
     currency_id = fields.Many2one(
         'res.currency', string='Moneda',
         default=lambda self: self.env.ref('base.MXN', raise_if_not_found=False),
@@ -34,10 +46,14 @@ class FreightTariffNational(models.Model):
         string='Costo (MXN)', required=True, tracking=True,
         help='Costo del flete nacional por viaje, en MXN.',
     )
+    # NOTA (2026-08-16): la capacidad se RETIRÓ de la ruta (ya no se captura
+    # en vistas): la capacidad va POR LÍNEA DE PRODUCTO. El campo se conserva
+    # solo por compatibilidad — con 0, el motor ALL-IN usa la capacidad del
+    # producto, que es el comportamiento deseado.
     capacidad = fields.Float(
         string='Capacidad (m²)', tracking=True,
-        help='m² que carga el viaje. El costo por m² = Costo ÷ Capacidad. '
-             'Si se deja en 0, el motor usa la capacidad del producto.',
+        help='OBSOLETO: la capacidad va por línea de producto. Con 0, el '
+             'motor usa la capacidad del producto.',
     )
     transit_time = fields.Integer(string='Transit Time (días)')
     notas = fields.Text(string='Notas')

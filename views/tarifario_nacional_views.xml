@@ -8,8 +8,8 @@
                 <field name="country_id" optional="show"/>
                 <field name="origen"/>
                 <field name="destino"/>
+                <field name="vehicle_type"/>
                 <field name="costo" widget="monetary"/>
-                <field name="capacidad"/>
                 <field name="transit_time" optional="hide"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="active" widget="boolean_toggle" optional="show"/>
@@ -29,12 +29,14 @@
                             <field name="country_id"/>
                             <field name="origen"/>
                             <field name="destino"/>
+                            <field name="vehicle_type"/>
                             <field name="transit_time"/>
                         </group>
+                        <!-- Capacidad retirada de la ruta: va por línea de
+                             producto (el motor usa la capacidad del producto). -->
                         <group string="Costo">
                             <field name="currency_id" invisible="1"/>
                             <field name="costo" widget="monetary"/>
-                            <field name="capacidad"/>
                             <field name="active" widget="boolean_toggle"/>
                         </group>
                     </group>

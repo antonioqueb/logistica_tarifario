@@ -56,22 +56,45 @@
                  espacio liberado): balancea contra Proveedor / Tipo de
                  Compra / Referencia PI / Moneda de la izquierda. -->
             <xpath expr="//field[@name='date_order'][not(ancestor::field)]/.." position="inside">
+                <!-- TRIGGER: 'Nacional' oculta la cascada internacional y
+                     pide la ruta del Tarifario Nacional; sus valores (tipo
+                     de vehículo, costo, transit time) se propagan solo
+                     lectura. Sin capacidad: esa va por línea de producto. -->
+                <field name="som_route_scope" widget="radio"
+                       options="{'horizontal': true}"/>
                 <field name="som_route_country_id"
+                       invisible="som_route_scope == 'national'"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_country_ids)]"/>
                 <field name="som_route_forwarder_id"
+                       invisible="som_route_scope == 'national'"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_forwarder_ids)]"/>
                 <field name="som_route_pol_id"
+                       invisible="som_route_scope == 'national'"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_pol_ids)]"/>
                 <field name="som_route_pod_id"
+                       invisible="som_route_scope == 'national'"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_pod_ids)]"/>
                 <field name="som_route_naviera_id"
+                       invisible="som_route_scope == 'national'"
                        options="{'no_create': True, 'no_open': True}"
                        domain="[('id', 'in', som_allowed_naviera_ids)]"/>
-                <field name="som_transport_type"/>
+                <field name="som_national_route_id"
+                       invisible="som_route_scope != 'national'"
+                       required="som_route_scope == 'national'"
+                       options="{'no_create': True}"/>
+                <field name="som_national_vehicle_type"
+                       invisible="som_route_scope != 'national' or not som_national_route_id"/>
+                <field name="som_national_currency_id" invisible="1"/>
+                <field name="som_national_costo" widget="monetary"
+                       invisible="som_route_scope != 'national' or not som_national_route_id"/>
+                <field name="som_national_transit_time"
+                       invisible="som_route_scope != 'national' or not som_national_route_id"/>
+                <field name="som_transport_type"
+                       invisible="som_route_scope == 'national'"/>
                 <field name="som_route_etd"/>
             </xpath>
 

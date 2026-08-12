@@ -27,6 +27,58 @@ _CAPACITY_UNSET_THRESHOLD = 1.0
 class PurchaseOrder(models.Model):
     _inherit = 'purchase.order'
 
+    # ÁMBITO DE LA RUTA — el trigger: 'Nacional' oculta la cascada
+    # internacional (país/forwarder/POL/POD/naviera) y pide la ruta del
+    # Tarifario Nacional, cuyos valores (origen→destino, tipo de vehículo,
+    # costo, transit time) se propagan como solo lectura. La capacidad NO
+    # viaja con la ruta: va por línea de producto.
+    som_route_scope = fields.Selection([
+        ('international', 'Internacional'),
+        ('national', 'Nacional'),
+    ], string='Ruta', default='international', tracking=True,
+        help='Internacional: cascada del tarifario (país → forwarder → '
+             'POL → POD). Nacional: ruta del Tarifario Nacional (flete '
+             'terrestre MXN).')
+
+    som_national_route_id = fields.Many2one(
+        'freight.tariff.national',
+        string='Ruta nacional',
+        tracking=True,
+        domain="[('active', '=', True)]",
+        help='Ruta origen→destino del Tarifario Nacional que paga esta '
+             'compra. Sus valores se propagan a la orden.',
+    )
+    som_national_vehicle_type = fields.Selection(
+        related='som_national_route_id.vehicle_type',
+        string='Tipo de vehículo',
+        readonly=True,
+    )
+    som_national_costo = fields.Monetary(
+        related='som_national_route_id.costo',
+        string='Costo del flete (MXN)',
+        currency_field='som_national_currency_id',
+        readonly=True,
+    )
+    som_national_currency_id = fields.Many2one(
+        related='som_national_route_id.currency_id',
+        readonly=True,
+    )
+    som_national_transit_time = fields.Integer(
+        related='som_national_route_id.transit_time',
+        string='Transit time (días)',
+        readonly=True,
+    )
+
+    @api.onchange('som_route_scope')
+    def _onchange_som_route_scope(self):
+        """Nacional implica transporte TERRESTRE; al regresar a internacional
+        se limpia la ruta nacional (los campos internacionales se conservan)."""
+        for order in self:
+            if order.som_route_scope == 'national':
+                order.som_transport_type = 'land'
+            else:
+                order.som_national_route_id = False
+
     som_route_country_id = fields.Many2one(
         'res.country',
         string='País de Origen',

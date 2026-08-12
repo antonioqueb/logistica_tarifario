@@ -1,6 +1,6 @@
 {
     'name': 'Gestión Profesional de Tarifas Logísticas',
-    'version': '19.0.4.0.0',
+    'version': '19.0.4.1.0',
     'author': 'Alphaqueb Consulting',
     'category': 'Operations/Logistics',
     'summary': 'Control histórico de tarifas y catálogo editable de fletes marítimos',
@@ -8,9 +8,7 @@
     # que ESE módulo inyecta (picking_type_id, effective_date). Sin la
     # dependencia, este módulo carga antes ('l' < 'p' a igual profundidad) y
     # la validación truena con "no se puede localizar" (2026-08-10).
-    'depends': ['base', 'mail', 'contacts', 'purchase', 'stock', 'purchase_stock',
-                # Modo de flete nacional en la página de costos del producto
-                'inventory_shopping_cart'],
+    'depends': ['base', 'mail', 'contacts', 'purchase', 'stock', 'purchase_stock'],
     'data': [
         'security/security.xml',
         'security/ir.model.access.csv',

@@ -69,31 +69,4 @@
               action="action_freight_tariff_national"
               sequence="15"/>
 
-    <!-- Modo de flete + ruta nacional junto a la configuración logística -->
-    <record id="product_template_form_national_freight" model="ir.ui.view">
-        <field name="name">product.template.form.national.freight</field>
-        <field name="model">product.template</field>
-        <field name="inherit_id" ref="inventory_shopping_cart.product_template_form_view_custom_prices"/>
-        <field name="arch" type="xml">
-            <xpath expr="//field[@name='x_origin_country_id']" position="before">
-                <field name="x_freight_mode" widget="radio" options="{'horizontal': true}"/>
-                <field name="x_national_route_id"
-                       invisible="x_freight_mode != 'national'"
-                       required="x_freight_mode == 'national'"
-                       options="{'no_create': True}"/>
-            </xpath>
-            <xpath expr="//field[@name='x_origin_country_id']" position="attributes">
-                <attribute name="invisible">x_freight_mode == 'national'</attribute>
-            </xpath>
-            <xpath expr="//field[@name='x_pol_id']" position="attributes">
-                <attribute name="invisible">x_freight_mode == 'national'</attribute>
-            </xpath>
-            <xpath expr="//field[@name='x_pod_id']" position="attributes">
-                <attribute name="invisible">x_freight_mode == 'national'</attribute>
-            </xpath>
-            <xpath expr="//field[@name='x_arancel_pct']" position="attributes">
-                <attribute name="invisible">x_freight_mode == 'national'</attribute>
-            </xpath>
-        </field>
-    </record>
 </odoo>
